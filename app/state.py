@@ -69,10 +69,10 @@ def _load(pending_path: str, history_path: str, ai: str, facts_dir: str, fixture
     history = load_requests(history_path).requests
     if fixture:
         provider: FactsProvider = FixtureProvider(fixture)
-        source = f"hand-labelled fixture ({fixture})"
+        source = "notes analysis: test fixture"
     else:
         provider = make_provider(ai, Path(facts_dir))
-        source = f"AI mode: {provider.mode} · saved facts in {facts_dir}"
+        source = f"notes analysis: {provider.mode}"
     history_provider = provider if fixture else SavedProvider(Path(facts_dir))
     return pending, history, MemoProvider(provider), MemoProvider(history_provider), source
 

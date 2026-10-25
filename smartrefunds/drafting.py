@@ -21,8 +21,8 @@ from .rules import (FIELDS, LANES, OPS, POLICY_TEXTS, Action, AnyOf, Condition, 
                     rule_from_dict, validate)
 
 DEFAULT_MODEL = "claude-opus-5-5"
-NO_KEY_ERROR = ("Turning sentences into rules needs an API key. "
-                "You can still build the rule in the form below.")
+NO_KEY_ERROR = ("Automatic rule drafting is unavailable (no API key configured). "
+                "You can still change the values on the left.")
 INVALID_PREFIX = "Couldn't turn that into a valid rule:"
 
 
@@ -190,10 +190,10 @@ def draft_rule(text: str, live: RuleSet, client=None, saved_dir: str | Path = Pa
             output_config={"effort": "medium"},
         )
     except Exception as e:
-        return Draft(text, None, [], f"The AI couldn't draft that right now ({type(e).__name__}). "
-                                     "You can still build the rule in the form below.", "live")
+        return Draft(text, None, [], f"Automatic rule drafting failed ({type(e).__name__}). "
+                                     "You can still change the values on the left.", "live")
     out = resp.parsed_output
     if resp.stop_reason == "refusal" or out is None:
-        return Draft(text, None, [], f"{INVALID_PREFIX} the AI returned nothing usable", "live")
+        return Draft(text, None, [], f"{INVALID_PREFIX} no usable rule was returned", "live")
     rules = [(c.label, _from_draft(c.rule, rid)) for c in out.choices]
     return _checked(text, out.question, rules, live, "live")

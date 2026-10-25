@@ -54,6 +54,24 @@ FACT_NAMES: tuple[str, ...] = tuple(
 APPROVAL_EVIDENCE_FACTS = (
     "photo_or_video_evidence", "picking_error_confirmed", "fraud_confirmed", "fraud_reported", "location_tag",
 )
+# Plain-English labels for screens.
+FACT_LABELS = {
+    "photo_or_video_evidence": "Photo or video evidence",
+    "carrier_signature_or_photo": "Carrier signature or delivery photo",
+    "carrier_investigation_open": "Carrier investigation open",
+    "fraud_reported": "Card reported stolen or unauthorised",
+    "fraud_confirmed": "Fraud confirmed by fraud team or bank",
+    "picking_error_confirmed": "Picking error confirmed",
+    "shipped_item_matches_order": "Shipped item matches the order",
+    "admits_delivered": "Customer says the parcel did arrive",
+    "admits_own_fault": "Customer caused the damage",
+    "already_refunded_elsewhere": "Already refunded elsewhere",
+    "reason_contradicts_note": "Notes contradict the stated reason",
+    "damage_cosmetic_only": "Cosmetic damage only",
+    "instructions_to_system": "Instructions addressed to the refund system",
+    "repeat_claim_pattern": "Pattern of repeat claims",
+    "location_tag": "Location",
+}
 ESCALATION_FACTS = (
     "carrier_signature_or_photo", "admits_delivered", "admits_own_fault", "already_refunded_elsewhere",
     "reason_contradicts_note", "damage_cosmetic_only", "instructions_to_system", "repeat_claim_pattern",

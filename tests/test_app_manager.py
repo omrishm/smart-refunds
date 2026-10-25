@@ -43,7 +43,7 @@ def draft(at, sentence):
 
 def test_rules_listed_with_locks(var):
     t = text(manager())
-    assert "S1" in t and "🔒" in t and "A1" in t
+    assert "S1" in t and "locked" in t and "A1" in t
 
 
 def test_cap_edit_preview(var):
@@ -67,7 +67,7 @@ def test_over_300_no_effect(var):
 
 
 def test_unknown_sentence_without_key(var):
-    assert "needs an API key" in text(draft(manager(), "Northfield cases under $100: refund in full"))
+    assert "no API key configured" in text(draft(manager(), "Northfield cases under $100: refund in full"))
 
 
 def test_publish_requires_reason(var):

@@ -93,7 +93,7 @@ class Store:
                 return PaymentResult(False, f"{request_id} was already refunded (${existing['amount']:g}); "
                                             "not paying again")
             c.execute("INSERT INTO payments VALUES (?,?,?,?)", (request_id, amount, method, _now()))
-        return PaymentResult(True, f"Simulated: would refund ${amount:,.2f} to {method} for {request_id}")
+        return PaymentResult(True, f"Refund of ${amount:,.2f} to {method} recorded for {request_id} (simulated)")
 
     def payments(self) -> list[dict]:
         with closing(self._conn()) as c:

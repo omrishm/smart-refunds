@@ -6,12 +6,12 @@ from datetime import date
 import streamlit as st
 
 from smartrefunds.engine import Decision
-from smartrefunds.facts import ESCALATION_FACTS, FACT_NAMES
+from smartrefunds.facts import ESCALATION_FACTS, FACT_LABELS, FACT_NAMES
 from smartrefunds.preview import history_label
 from smartrefunds.rules import LANES
 
 REASON_CODES = ["", "Customer history", "Evidence in notes", "Policy exception approved by manager",
-                "AI flag wrong", "Other"]
+                "Flag incorrect", "Other"]
 PARTIAL_PRESETS = ["shipping only", "25%", "30%", "50%", "custom"]
 SEVERITY = {"S3": 5, "R1": 4, "R2": 3, "R5": 3, "R6": 3, "S2": 2, "S1": 2}
 
@@ -93,7 +93,7 @@ def _incidents(ctx, ids: set[str]) -> None:
         with st.container(border=True):
             st.markdown(f"**Incident: {inc.tag.title()} backlog** · {len(members)} cases · "
                         f"${inc.total_amount:,.0f} · first seen {inc.first_seen:%d %b %Y}")
-            st.caption("Cases: " + ", ".join(members) + " · AI matched: " + ", ".join(f"“{s}”" for s in inc.spellings))
+            st.caption("Cases: " + ", ".join(members) + " · Also written as: " + ", ".join(f"“{s}”" for s in inc.spellings))
             if st.button("Suggest a rule to the manager", key="suggest_rule"):
                 st.session_state["prefill_change"] = (f"{inc.tag.title()} never-arrived cases under $100: "
                                                       "refund in full")
@@ -148,23 +148,26 @@ def _case(ctx, d: Decision, role: str, waiting: bool) -> None:
         if o.warning:
             st.error(o.warning)
 
-        st.markdown("**Why it's here** (rules, not AI)")
+        st.markdown("**Why this case needs review**")
         titles = {rule.id: rule.title for rule in ctx.live.rules}
         for rid in o.matched_rule_ids:
             if rid != "A1" and titles.get(rid):
                 st.markdown(f"- `{rid}` {titles[rid]}")
 
         with st.container(border=True):
-            st.caption("AI reading of the notes · can only escalate, never approve")
+            st.markdown("**Notes analysis**")
             if d.facts is None:
-                st.markdown("_AI facts unavailable for this request; read the notes below._")
+                st.markdown("_The notes could not be analysed automatically. Review them below._")
             else:
                 st.markdown(d.facts.summary)
                 for name, value, evidence in _flags(d):
-                    st.checkbox(f"{name.replace('_', ' ')}: **{value}** — “{evidence}”", value=True,
-                                key=f"fb_{name}", help="Untick if the AI got this wrong")
+                    st.checkbox(f"{FACT_LABELS[name]}: **{value.replace('_', ' ')}** — “{evidence}”", value=True,
+                                key=f"fb_{name}", help="Untick if this flag is incorrect")
+                st.caption("Flags only ever send a case for review; they never approve a refund. "
+                           "Untick any flag that is incorrect.")
 
-        st.markdown("**Evidence** · untrusted text, shown as written")
+        st.markdown("**Original notes**")
+        st.caption("Shown exactly as written by the customer and the support agent.")
         st.text(f"Support note: {r.support_note or '(empty)'}")
         st.text(f"Customer note: {r.customer_note or '(empty)'}")
         similar = _similar(ctx, d)
@@ -185,8 +188,8 @@ def _case(ctx, d: Decision, role: str, waiting: bool) -> None:
 
 def _actions(ctx, d: Decision, role: str) -> None:
     r, o = d.request, d.outcome
-    suggestion = "reject (draft ready)" if o.draft_rejection else "review"
-    st.markdown(f"**Decide** · system suggests: {suggestion}")
+    suggestion = "reject (draft message ready)" if o.draft_rejection else "review"
+    st.markdown(f"**Decision** · recommendation: {suggestion}")
     reason_code = st.selectbox("Reason code (required when you go against the suggestion)", REASON_CODES,
                                key="reason_code")
     note = st.text_input("Note (optional)", key="note")

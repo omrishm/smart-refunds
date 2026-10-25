@@ -8,6 +8,7 @@ import streamlit as st
 
 from smartrefunds.drafting import draft_rule, insert_rule, overridden_rules, suggest_position
 from smartrefunds.preview import preview
+from smartrefunds.facts import FACT_LABELS
 from smartrefunds.rules import AnyOf, Condition, RuleSet, load_rules, rule_to_dict, validate
 
 # (widget key, rule id, condition field, label)
@@ -18,13 +19,26 @@ EDITS = [
     ("edit_window", "R4", "days_since_delivery", "Change-of-mind window (days)"),
     ("edit_photo", "R11", "amount_usd", "Damage photo needed above ($)"),
 ]
+FIELD_LABELS = {
+    "amount_usd": "amount ($)", "tenure_months": "account age (months)",
+    "prior_refunds_12m": "refunds in last 12 months", "days_since_delivery": "days since delivery",
+    "stated_reason": "reason", "payment_method": "payment method", "fraud_flag": "fraud flag",
+    "is_valid": "data complete", "duplicate_id": "duplicate request ID", "notes_present": "has notes",
+    "facts_available": "notes analysed",
+}
 STATE_KEYS = ["draft_result", "choice", "position", "rollback_from", "publish_reason", "change_text"] + [e[0] for e in EDITS]
 
 
 def _cond_text(c) -> str:
     if isinstance(c, AnyOf):
         return "(" + " or ".join(_cond_text(x) for x in c.conditions) + ")"
-    field = c.field.replace("facts.", "AI: ").replace("_", " ")
+    if c.field.startswith("facts."):
+        label = FACT_LABELS.get(c.field[6:], c.field[6:]).lower()
+        if c.op == "=" and c.value == "yes":
+            return f"notes show: {label}"
+        field = f"notes: {label}"
+    else:
+        field = FIELD_LABELS.get(c.field, c.field.replace("_", " "))
     value = "" if c.op in ("is_set", "is_unset") else f" {c.value}"
     return f"{field} {c.op}{value}"
 
@@ -81,7 +95,7 @@ def _rules_column(ctx, base: RuleSet) -> RuleSet:
     if st.session_state.get("rollback_from") is not None:
         st.warning(f"Previewing a roll-back to v{st.session_state['rollback_from']}.")
     st.subheader(f"Live rules · v{ctx.live.version}")
-    st.caption("Checked top to bottom; the first rule that matches decides. 🔒 safety rules can't be changed here.")
+    st.caption("Checked top to bottom; the first rule that matches decides. Locked safety rules can't be changed here.")
     candidate = copy.deepcopy(base)
     st.markdown("**Values you can change directly**")
     for key, rule_id, field, label in EDITS:
@@ -89,7 +103,7 @@ def _rules_column(ctx, base: RuleSet) -> RuleSet:
         if cond is not None:
             cond.value = st.number_input(label, min_value=0, value=int(cond.value), step=1, key=key)
     for r in ctx.live.rules:
-        st.markdown(f"{'🔒 ' if r.locked else ''}`{r.id}` {r.title}")
+        st.markdown(f"`{r.id}` {r.title}" + (" · _locked_" if r.locked else ""))
 
     st.markdown("**Version history**")
     for v, at, reason in reversed(ctx.store.versions()):
@@ -120,8 +134,7 @@ def _change_column(ctx, candidate: RuleSet) -> None:
             st.warning(d.error)
         elif d.choices:
             with st.container(border=True):
-                st.caption(f"How the system understood it · {'saved example' if d.source == 'saved' else 'AI draft'}"
-                           " · nothing is live yet")
+                st.caption("Proposed rule · not live until published")
                 labels = [c.label for c in d.choices]
                 if d.question:
                     st.markdown(f"**{d.question}**")

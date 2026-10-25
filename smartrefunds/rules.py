@@ -44,8 +44,9 @@ POLICY_TEXTS: dict[str, str] = {
     ),
 }
 INJECTION_WARNING = (
-    "The customer note contains text that tries to instruct the refund system. It was ignored. "
-    "Treat this request with extra care."
+    "Possible manipulation: the customer note contains instructions addressed to the refund system "
+    "(for example, a claim that the refund was pre-approved). They were not acted on. Verify this request "
+    "independently."
 )
 
 

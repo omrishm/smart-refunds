@@ -21,14 +21,16 @@ st.set_page_config(page_title="Smart Refunds", layout="wide")
 with st.sidebar:
     st.title("Smart Refunds")
     role = st.radio("Viewing as", ["Reviewer", "Fraud team", "Manager"], key="role")
-    st.caption("No logins in this demo: pick a role.")
+    st.caption("Demo environment: choose a role (no sign-in).")
     if st.button("Reset demo", key="reset_demo", help="Clears decisions, payments and published rules"):
         load_context().store.reset()
         st.session_state.clear()
         st.rerun()
 
 ctx = load_context()
-st.info(f"{ctx.facts_source} · rules v{ctx.live.version} · Payments are simulated: nothing is actually refunded.")
+with st.sidebar:
+    st.caption(f"Rules v{ctx.live.version} · {ctx.facts_source}")
+st.info("Demo environment: refunds are simulated and no messages are sent to customers.")
 
 if role == "Manager":
     manager.render(ctx)

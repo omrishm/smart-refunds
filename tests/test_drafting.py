@@ -49,8 +49,7 @@ def test_saved_draft_matches_variants(v1):
 def test_no_key_unknown_text_error(v1):
     d = draft_rule("Northfield cases under $100: refund in full", v1, client=None)
     assert d.error == NO_KEY_ERROR and d.choices == [] and d.source == "none"
-    assert NO_KEY_ERROR == ("Turning sentences into rules needs an API key. "
-                            "You can still build the rule in the form below.")
+    assert "no API key configured" in NO_KEY_ERROR
 
 
 def test_live_draft_with_fake_client(v1):

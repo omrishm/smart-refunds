@@ -22,7 +22,7 @@ rules:
       - {field: facts.instructions_to_system, op: "=", value: "yes"}
     then: {kind: route, lane: by_reason}
   - id: S4
-    title: AI unavailable → anything with notes goes to a person
+    title: Notes could not be analysed → person
     locked: true
     when:
       - {field: notes_present, op: "=", value: true}

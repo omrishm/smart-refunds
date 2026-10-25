@@ -50,7 +50,7 @@ def test_reviewer_tabs_counts(var):
     for label in ["Fraud team (3)", "Delivery disputes (9)", "Damage & evidence (2)", "Policy rejections (1)",
                   "Other (3)", "Waiting (0)"]:
         assert label in options
-    assert "Payments are simulated" in all_text(at)
+    assert "refunds are simulated" in all_text(at)
 
 
 def test_fraud_role_sees_only_fraud_lane(var):
