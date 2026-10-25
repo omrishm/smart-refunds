@@ -1,0 +1,29 @@
+{
+  "text": "From now on, stolen-card cases go straight through.",
+  "question": "Which do you mean by \u201cstolen-card case\u201d?",
+  "choices": [
+    {
+      "label": "Confirmed: the fraud team or bank confirmed the card was stolen",
+      "rule": {
+        "id": "M1",
+        "title": "Stolen card confirmed by fraud team or bank \u2192 approve in full",
+        "when": [{"field": "facts.fraud_confirmed", "op": "=", "value": "yes"}],
+        "then": {"kind": "approve"},
+        "note": "Policy 5: refund the real cardholder in full"
+      }
+    },
+    {
+      "label": "Reported: the cardholder reported the card stolen or the purchase unauthorised",
+      "rule": {
+        "id": "M1",
+        "title": "Card reported stolen or unauthorised \u2192 approve in full",
+        "when": [{"any_of": [
+          {"field": "facts.fraud_reported", "op": "=", "value": "yes"},
+          {"field": "facts.fraud_confirmed", "op": "=", "value": "yes"}
+        ]}],
+        "then": {"kind": "approve"},
+        "note": "Policy 5: refund the real cardholder in full"
+      }
+    }
+  ]
+}

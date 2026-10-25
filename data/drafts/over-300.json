@@ -1,0 +1,15 @@
+{
+  "text": "From now on, anything over $300 comes to us.",
+  "question": null,
+  "choices": [
+    {
+      "label": "Anything over $300 goes to a person",
+      "rule": {
+        "id": "M1",
+        "title": "Over $300 \u2192 person",
+        "when": [{"field": "amount_usd", "op": ">", "value": 300}],
+        "then": {"kind": "route", "lane": "by_reason"}
+      }
+    }
+  ]
+}
