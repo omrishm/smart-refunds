@@ -18,3 +18,18 @@ README's "how AI coding tools were used" section.
 - **Thrown away: exploratory analysis scripts.** One-off scripts produced the numbers in
   `docs/findings.md`. They were replaced by the repo's preview engine (`python -m smartrefunds backtest`),
   so slide numbers are reproducible from committed code.
+
+## Build
+
+- **Changed: the note-reader prompt (notes-v1 → notes-v2).**
+  - The first live run on `pending.csv` showed Opus 5.5 answering `admits_delivered = yes` for wrong-item,
+    wrong-size and late-delivery requests. That's literally true, since the parcel did arrive, but it isn't
+    what the fact is for.
+  - Through rule R6 it sent RF-2198 (a $52 late delivery) to a person.
+  - Fixed in two places:
+    - the prompt now scopes the fact to never-arrived claims
+    - the rule only uses it for `never_arrived` (new R2b), so a model slip can't misroute other reasons
+  - Caught by comparing the live output against the hand labels before running the 248 history rows.
+- **Changed: a test that silently spent money.** Once a real key was in `.env`, the app loaded it during a
+  manager-screen test and made one live drafting call (about 1¢). Tests now blank the key with an autouse
+  fixture, so no test can reach the API.

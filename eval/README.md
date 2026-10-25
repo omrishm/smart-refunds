@@ -15,7 +15,7 @@ the true facts.
 
 `labels.md` is the same set laid out for reading.
 
-**Label sign-off:** _pending review by Omri._
+**Label sign-off:** reviewed and accepted by Omri on 2026-10-25, including the three judgement calls (RF-1027, RF-2068, RF-1071).
 
 Run (costs money, prints an estimate first):
 
