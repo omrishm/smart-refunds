@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 
 from .engine import Decision
+from .places import normalise_place
 
 
 @dataclass
@@ -24,7 +25,7 @@ def find_incidents(decisions: list[Decision], open_ids: set[str] | None = None, 
             continue
         if open_ids is not None and d.request.request_id not in open_ids:
             continue
-        tag = d.facts.location_tag.value
+        tag = normalise_place(d.facts.location_tag.value)
         if tag:
             by_tag.setdefault(tag, []).append(d)
 

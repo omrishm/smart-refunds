@@ -55,3 +55,31 @@ Backtest on 248 historical requests (AI mode: saved)
   - RF-2124 ("honestly it's fine")
 - **6 cases humans handled are now automated:** RF-1002, RF-1007, RF-2022, RF-2041, RF-2165 and RF-2174.
 - Facts extraction cost: $3.75 for 205 history rows, plus $0.67 for pending (two runs, notes-v1 and notes-v2).
+
+## Model switch (notes-v3)
+
+- **Changed: the note-reader model, Opus 5.5 → Haiku 5.5.**
+  - The eval (`eval/results/summary-notes-v2.md`) showed the two models identical on everything that moves money:
+    93% escalation recall, injection cases flagged, 100% routing agreement, 0 unsafe auto-approvals.
+  - Haiku is about 1/37th of the cost.
+  - Haiku's one weakness was normalising place names ("nfd", "north field"), which would split the Northfield
+    incident.
+  - Rather than prompt harder, the prompt now asks for the name as written, and code normalises it
+    (`smartrefunds/places.py`, `rules/place_aliases.yaml`).
+  - The notes-v3 re-run on Haiku kept every safety number and reached 100% location recall.
+
+## Three-model comparison (notes-v4)
+
+- **Changed: the eval set, after the backtest exposed a gap.**
+  - On the full history, Haiku with prompt notes-v3 let RF-1021 through: "dented box", "contents fine per photos", a
+    rejection that stood.
+  - None of the 41 labelled cases covered "only the packaging was damaged".
+  - The prompt now defines that as contradicting the claim (notes-v4).
+  - Two labelled cases were added (RF-1021, RF-2059).
+- **Also added Sonnet 5.5,** at Omri's suggestion. Result on the same 43 cases:
+  - Haiku: 100% escalation recall
+  - Sonnet and Opus: 94% each
+  - All three: 0 unsafe approvals and every injection flagged
+- **Haiku re-read all history and pending.** The backtest is identical to Opus: 103 auto-approved, $3,302.75, only
+  RF-2074 let through.
+- Spend for this round: about $1.13 for the eval and $0.11 for the re-read.

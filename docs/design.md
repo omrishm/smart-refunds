@@ -52,8 +52,8 @@ multi-user concurrency, production monitoring infrastructure.
 - Scope target: 4–6 hours of build. Deadline: 4 days from receipt.
 - Python 3.12 (existing `.venv`), Streamlit, pytest, the official `anthropic` SDK. Windows dev machine,
   but nothing Windows-specific.
-- LLM: **Claude Opus 5.5** (`claude-opus-5-5`) for note reading and rule drafting. **Claude Haiku 5.5**
-  (`claude-haiku-5-5`) is evaluated as a cheaper comparison. The key comes from `ANTHROPIC_API_KEY`
+- LLM: **Claude Haiku 5.5** (`claude-haiku-5-5`) for note reading, chosen after the eval (it started as Opus
+  5.5; see D4). **Claude Opus 5.5** (`claude-opus-5-5`) for rule drafting. The key comes from `ANTHROPIC_API_KEY`
   (env var or `.env`). Omri has a key with credits. Expected total spend during the build is about
   $5–10 (history facts about $4, eval about $1, plus development calls).
 - Tests never call the LLM. They use a fake client or the saved outputs.
@@ -67,7 +67,7 @@ multi-user concurrency, production monitoring infrastructure.
 | D1 | **The line = option B, cap $100.** Auto-approve only reasons with complete evidence, up to $100: tenure ≥ 9 months, 0 prior refunds, fraud flag an explicit "no", never-arrived always to a person. The cap and tenure are manager-editable values. Evidence: findings §4 plus the backtest in §8. |
 | D2 | **No auto-reject.** Where policy clearly says reject, the system **pre-fills a rejection** (with the policy cited) that a person confirms or edits. |
 | D3 | **Manager changes rules both ways:** plain English → AI drafts a structured rule (asking a clarifying question when ambiguous) → she edits or confirms → preview → publish. The structured form is what runs. |
-| D4 | **Stack:** Python + Streamlit. **Model:** Opus 5.5, with Haiku 5.5 as the eval comparison. |
+| D4 | **Stack:** Python + Streamlit. **Model:** started as Opus 5.5 with Haiku 5.5 as the eval comparison. **Revised after the eval:** Haiku, Sonnet and Opus 5.5 were compared on 43 labelled cases; Haiku 5.5 reads the notes (equal or better safety numbers at the lowest cost, confirmed by the full backtest). Place-name spellings are handled in code. Opus 5.5 stays for rule drafting. |
 | D5 | **Reviewer queue = separate lanes** (Fraud team, Delivery disputes, Damage & evidence, Policy rejections, Other) with **incident grouping** (e.g. Northfield). |
 | D6 | **Case view and manager screen as in the approved mockups** (`.superpowers/brainstorm/mockups/`, not committed; the relevant content is captured in §7). |
 | D7 | **Rules are an ordered list; the first matching rule decides.** Locked safety rules are pinned at the top. New rules get a suggested position, and the preview reflects that position. |
@@ -82,7 +82,7 @@ multi-user concurrency, production monitoring infrastructure.
      │ 1. load & clean     │  deterministic: parse, normalise, dedupe, mark invalid
      └──────────┬──────────┘
      ┌──────────▼──────────┐
-     │ 2. note reader (AI) │  redact PII → Opus 5.5 → fixed set of facts + summary
+     │ 2. note reader (AI) │  redact PII → Haiku 5.5 → fixed set of facts + summary
      │    saved / live / off │  (only ever adds reasons to escalate)
      └──────────┬──────────┘
      ┌──────────▼──────────┐
@@ -190,7 +190,7 @@ Default: saved if available, else live if a key is set, else off. In `off` mode,
 row with non-empty notes to a person. A live call that fails (error, refusal, schema invalid) is treated
 as `off` for that row.
 
-**Saved outputs committed:** facts for all of `history.csv` (248 unique rows, about $4 on Opus 5.5) and
+**Saved outputs committed:** facts for all of `history.csv` (248 unique rows: $3.75 on Opus 5.5, about $0.10 on Haiku 5.5) and
 `pending.csv`. They are labelled in the README and the UI ("AI facts loaded from saved run of
 <date>, model X").
 

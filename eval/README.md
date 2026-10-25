@@ -1,6 +1,6 @@
 # Note-reader eval
 
-`cases.jsonl` has 41 hand-labelled cases:
+`cases.jsonl` has 43 hand-labelled cases:
 - every row of `pending.csv`
 - the history notes behind all 8 chargebacks and the 3 overturned appeals
 - the claimed-authority note (RF-2068)
@@ -8,6 +8,7 @@
 - the PII note
 - a repeat-claims note
 - three plain controls
+- two "only the box was damaged" rejections (RF-1021, RF-2059), added after the Haiku backtest exposed the gap
 
 Each label is the set of facts a correct note reader should report. Every evidence quote is checked against the
 notes by `tests/test_evaluation.py`. Expected routing is not labelled separately: it's what the v1 rules do with
@@ -21,7 +22,9 @@ Run (costs money, prints an estimate first):
 
     python -m smartrefunds eval
 
-Results go to `results/<date>-<model>.json` and `results/summary.md`.
+Results go to `results/<date>-<prompt>-<model>.json`. `results/summary.md` is the latest run, and
+`summary-<prompt>.md` keeps each prompt version's run. `summary-notes-v2.md` is the Opus vs Haiku
+comparison behind the model choice.
 
 **Headline metrics:**
 - **Escalation recall:** share of true red flags the model caught.

@@ -36,3 +36,9 @@ def test_closed_cases_excluded():
     ds = [_decision(i, i) for i in range(1, 4)]
     assert len(find_incidents(ds)) == 1
     assert find_incidents(ds, open_ids={"RF-1", "RF-2"}) == []
+
+
+def test_spelling_variants_group_together():
+    ds = [_decision(1, 0, "nfd"), _decision(2, 1, "North field"), _decision(3, 2, "Northfield sort centre")]
+    (inc,) = find_incidents(ds)
+    assert inc.tag == "northfield" and len(inc.request_ids) == 3

@@ -168,7 +168,7 @@ should be `not_mentioned`), and where the v1 rules then send it. Edit `eval/case
 - Customer note: no delivery
 - Support note: Spoke to her at 14:20 - she said it did turn up at the back door on Tuesday, but she wants the money back for the hassle since it was late. Told her I'd pass it on.
 - Labels: `admits_delivered` = **yes** (“it did turn up at the back door”)
-- Routes to: Delivery disputes (R3)  
+- Routes to: Delivery disputes (R2b)  
 - Note: chargeback
 
 ### history:RF-2111 · arrived_damaged · $390
@@ -268,3 +268,17 @@ should be `not_mentioned`), and where the v1 rules then send it. Edit `eval/case
 - Labels: `picking_error_confirmed` = **yes** (“confirmed picking error”)
 - Routes to: auto-approve  
 - Note: control: confirmed mis-pick
+
+### history:RF-1021 · arrived_damaged · $58
+- Customer note: dented box
+- Support note: contents fine per photos
+- Labels: `photo_or_video_evidence` = **present** (“contents fine per photos”), `reason_contradicts_note` = **yes** (“contents fine per photos”)
+- Routes to: Damage & evidence (R6)  
+- Note: rejected: only the box was dented. Added after the Haiku backtest let it through (approved in chat)
+
+### history:RF-2059 · arrived_damaged · $72
+- Customer note: dented
+- Support note: Dent is on the outer carton only; contents fine per photos.
+- Labels: `photo_or_video_evidence` = **present** (“contents fine per photos”), `reason_contradicts_note` = **yes** (“Dent is on the outer carton only”)
+- Routes to: Damage & evidence (R6)  
+- Note: rejected: only the outer carton was dented. Added with RF-1021 (approved in chat)

@@ -1,0 +1,3 @@
+# Abbreviations and alternative names for places, mapped to one canonical name.
+# Keys and values are compared after normalisation (lowercase, no spaces or punctuation).
+nfd: northfield

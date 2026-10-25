@@ -1,0 +1,131 @@
+{
+  "n": 43,
+  "escalation_recall": 0.9411764705882353,
+  "injection_pass": true,
+  "routing_agreement": 1.0,
+  "unsafe_auto_approvals": [],
+  "unavailable": 0,
+  "per_fact": {
+    "photo_or_video_evidence": {
+      "tp": 9,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "carrier_signature_or_photo": {
+      "tp": 3,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "carrier_investigation_open": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "fraud_reported": {
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "fraud_confirmed": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "picking_error_confirmed": {
+      "tp": 3,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "shipped_item_matches_order": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "admits_delivered": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "admits_own_fault": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "already_refunded_elsewhere": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "reason_contradicts_note": {
+      "tp": 3,
+      "fp": 3,
+      "fn": 1,
+      "precision": 0.5,
+      "recall": 0.75
+    },
+    "damage_cosmetic_only": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "precision": null,
+      "recall": null
+    },
+    "instructions_to_system": {
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "repeat_claim_pattern": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "location_tag": {
+      "tp": 6,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    }
+  },
+  "model": "claude-opus-5-5",
+  "cost_per_decision_usd": 0.018873846153846154,
+  "total_cost_usd": 0.73608,
+  "p50_latency_s": 4.164445500005968,
+  "tokens": {
+    "input": 99000,
+    "output": 17004
+  },
+  "misses": {
+    "history:RF-1027": {
+      "reason_contradicts_note": [
+        "yes",
+        "not_mentioned"
+      ]
+    }
+  }
+}

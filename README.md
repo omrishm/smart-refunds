@@ -31,7 +31,7 @@ Copy `.env.example` to `.env` and set `ANTHROPIC_API_KEY`. Without a key everyth
 |---|---|
 | `auto` (default) | Saved AI facts for known notes (`data/facts/`); unseen notes go to the API if a key is set, otherwise as `off` |
 | `saved` | Saved facts only; unseen notes are treated as AI-unavailable |
-| `live` | Every note goes to the API (Claude Opus 5.5) |
+| `live` | Every note goes to the API (Claude Haiku 5.5) |
 | `off` | No AI. Safety rule S4 sends every request that has notes to a person |
 
 Commands that cost money print an estimate and ask first:
@@ -51,7 +51,7 @@ manager screen  → plain English → AI draft → structured rule → preview (
 - **Cleaning (`smartrefunds/clean.py`).** Handles messy amounts, dates, reasons and flags, plus duplicates.
   Anything unreadable is marked invalid and goes to a person; it's never treated as safe.
 - **Note reader (`smartrefunds/notes.py`).**
-  - Removes card numbers, phone numbers and emails, then asks Claude Opus 5.5 for a fixed set of facts with
+  - Removes card numbers, phone numbers and emails, then asks Claude Haiku 5.5 for a fixed set of facts with
     verbatim quotes.
   - Notes are passed as untrusted data, so planted instructions are flagged, not followed.
   - Approval evidence that isn't actually in the notes is discarded.
@@ -92,8 +92,9 @@ manager screen  → plain English → AI draft → structured rule → preview (
 ## AI: where it is and isn't
 
 **The LLM is used for three things:**
-- reading notes into facts and a reviewer summary, in any language
-- drafting rules from the manager's sentences, which she always confirms
+- reading notes into facts and a reviewer summary, in any language (Claude Haiku 5.5)
+- drafting rules from the manager's sentences, which she always confirms (Claude Opus 5.5: rare, harder
+  reasoning, so cost doesn't matter there)
 - the place tag behind incident grouping
 
 **It is deliberately not used for:**
@@ -101,8 +102,20 @@ manager screen  → plain English → AI draft → structured rule → preview (
 - parsing, de-duplication and payment idempotency
 - the preview arithmetic
 
-Those must be testable, explainable and safe when the model is down. The eval results are in
-[`eval/results/summary.md`](eval/results/summary.md).
+Those must be testable, explainable and safe when the model is down. Place-name spellings ("NFD",
+"North field") are normalised in code (`rules/place_aliases.yaml`), not by the model.
+
+**Model choice came from the eval** ([`eval/results/summary-notes-v4.md`](eval/results/summary-notes-v4.md)), on the same 43
+hand-labelled cases:
+
+| Model | Red flags caught | Unsafe approvals | Cost per decision |
+|---|---|---|---|
+| Haiku 5.5 | 100% | 0 | 0.05¢ |
+| Sonnet 5.5 | 94% | 0 | 0.95¢ |
+| Opus 5.5 | 94% | 0 | 1.9¢ |
+
+All three flagged every planted instruction and matched the expected routing on every case. The cheapest won, and the
+backtest over all 248 past decisions confirmed it: identical to Opus, with only the one uncatchable miss.
 
 ## How AI coding tools were used
 

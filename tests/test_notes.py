@@ -100,10 +100,24 @@ def test_live_provider_success_uses_documented_call():
     got = LiveProvider(client).get(make_request(customer_note="mug chipped"))
     assert got.photo_or_video_evidence.value == "present"
     call = client.beta.messages.calls[0]
-    assert call["model"] == "claude-opus-5-5"
+    assert call["model"] == "claude-haiku-5-5"  # the default note reader
     assert call["output_config"] == {"effort": "low"}
-    assert call["fallbacks"] == "default"
+    assert "fallbacks" not in call  # Haiku has no server-side refusal fallback
     assert not {"temperature", "top_p", "top_k", "thinking"} & set(call)
+
+
+def test_opus_requests_server_side_fallback():
+    client = fake_client(response(make_facts()))
+    LiveProvider(client, model="claude-opus-5-5").get(make_request(customer_note="mug chipped"))
+    call = client.beta.messages.calls[0]
+    assert call["fallbacks"] == "default" and call["betas"] == ["server-side-fallback-2026-07-01"]
+
+
+def test_location_is_normalised_in_code():
+    f = make_facts(location_tag="North field")
+    f.location_tag.evidence = "North field depot"
+    got = LiveProvider(fake_client(response(f))).get(make_request(customer_note="Order stuck at the North field depot"))
+    assert got.location_tag.value == "northfield"
 
 
 def test_live_provider_skips_rows_without_notes():

@@ -14,7 +14,7 @@ from .rules import load_rules
 DEFAULT_RULES = Path("rules/v1.yaml")
 FACTS_DIR = Path("data/facts")
 # $ per 1M tokens (input, output) and a rough per-request size, for cost estimates printed before paid runs.
-PRICES = {"claude-opus-5-5": (4.00, 20.00), "claude-haiku-5-5": (0.10, 0.50)}
+PRICES = {"claude-opus-5-5": (4.00, 20.00), "claude-sonnet-5-5": (2.00, 10.00), "claude-haiku-5-5": (0.10, 0.50)}
 EST_TOKENS = (2500, 450)  # measured on pending.csv: ~2,400 in / ~450 out
 
 
@@ -119,9 +119,10 @@ def cmd_eval(args: argparse.Namespace) -> int:
     out.mkdir(parents=True, exist_ok=True)
     date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     for model, res in results.items():
-        (out / f"{date}-{model}.json").write_text(json.dumps(res, indent=2, ensure_ascii=False), encoding="utf-8")
-    summary = evaluation.summary_markdown(results, date)
+        (out / f"{date}-{notes.PROMPT_VERSION}-{model}.json").write_text(json.dumps(res, indent=2, ensure_ascii=False), encoding="utf-8")
+    summary = evaluation.summary_markdown(results, f"{date} · prompt {notes.PROMPT_VERSION}")
     (out / "summary.md").write_text(summary, encoding="utf-8")
+    (out / f"summary-{notes.PROMPT_VERSION}.md").write_text(summary, encoding="utf-8")
     print(summary)
     return 0
 
@@ -140,7 +141,7 @@ def build_parser() -> argparse.ArgumentParser:
     ex = sub.add_parser("extract-facts", help="read notes with the LLM and save facts (costs money)")
     ex.add_argument("csv")
     ex.add_argument("--out", required=True)
-    ex.add_argument("--model", default="claude-opus-5-5")
+    ex.add_argument("--model", default="claude-haiku-5-5")
     ex.add_argument("--effort", default="low")
     ex.add_argument("--yes", action="store_true", help="skip the cost confirmation")
     ex.set_defaults(func=cmd_extract_facts)

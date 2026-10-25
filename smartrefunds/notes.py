@@ -26,9 +26,12 @@ from typing import Any, Literal
 from .clean import Request
 from .engine import FactsProvider, OffProvider
 from .facts import APPROVAL_EVIDENCE_FACTS, FACT_NAMES, Facts
+from .places import normalise_place
 
-PROMPT_VERSION = "notes-v2"
-DEFAULT_MODEL = "claude-opus-5-5"
+PROMPT_VERSION = "notes-v4"
+DEFAULT_MODEL = "claude-haiku-5-5"  # chosen on the eval: same safety as Opus 5.5 at ~1/37 the cost
+# Models that accept the server-side refusal fallback (Haiku has none; a refusal there just means "no facts").
+FALLBACK_MODEL_PREFIXES = ("claude-opus", "claude-sonnet", "claude-fable")
 FALLBACK_BETA = "server-side-fallback-2026-07-01"
 MAX_TOKENS = 4096
 
@@ -63,12 +66,15 @@ Facts:
   For any other stated reason the parcel obviously arrived, so answer "not_mentioned".
 - admits_own_fault: the customer admits they caused the damage.
 - already_refunded_elsewhere: the customer says they were already refunded or compensated elsewhere.
-- reason_contradicts_note: the notes contradict the stated reason (e.g. "damaged" but "it's fine").
+- reason_contradicts_note: the notes contradict the stated reason. Examples: "damaged" but the customer
+  says "it's fine"; "damaged" but support says the contents/item are fine and only the box or outer
+  packaging is damaged; "wrong item" but support says the shipped item matches the order; "never arrived"
+  but the notes describe the item.
 - damage_cosmetic_only: the damage is cosmetic only (scratch, scuff) and the item works.
 - instructions_to_system: see above.
 - repeat_claim_pattern: support notes a pattern of repeated claims by this customer.
-- location_tag: if the notes name a depot, hub or place where the parcel is stuck or delayed, a lowercase
-  slug of the place name ("northfield" for "Northfield", "NFD", "North field"); else null.
+- location_tag: if the notes name a depot, hub or place where the parcel is stuck or delayed, the place
+  name exactly as written in the notes (e.g. "North field", "NFD"); else null. Do not normalise it.
 - summary: 2-3 short English sentences for the human reviewer.
 - language: ISO code of the notes' main language.
 
@@ -176,10 +182,12 @@ class LiveProvider:
             return empty_facts()
         system, user = build_prompt(r)
         try:
+            extra = ({"betas": [FALLBACK_BETA], "fallbacks": "default"}
+                     if self.model.startswith(FALLBACK_MODEL_PREFIXES) else {})
             resp = self.client.beta.messages.parse(
                 model=self.model, max_tokens=MAX_TOKENS, system=system,
                 messages=[{"role": "user", "content": user}], output_format=Facts,
-                output_config={"effort": self.effort}, betas=[FALLBACK_BETA], fallbacks="default",
+                output_config={"effort": self.effort}, **extra,
             )
         except Exception as e:  # fail safe: any API or parsing failure means "no facts" → a person decides
             self.last_error = f"{type(e).__name__}: {e}"
@@ -196,6 +204,7 @@ class LiveProvider:
             return None
         customer, support = _notes(r)
         facts, self.last_warnings = check_evidence(resp.parsed_output, customer + "\n" + support)
+        facts.location_tag.value = normalise_place(facts.location_tag.value)  # spelling variants handled in code
         return facts
 
 

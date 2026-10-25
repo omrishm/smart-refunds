@@ -85,11 +85,13 @@ def test_preview_flags_bad_outcomes(v1):
     assert any("Lets through 1 cases with bad outcomes in history" in w for w in res.warnings)
 
 
-@pytest.mark.skipif(not Path("data/facts/history.jsonl").exists(), reason="saved history facts not generated yet")
 def test_backtest_v1_snapshot(v1, history):
     from smartrefunds.notes import SavedProvider
 
-    res = preview(v1, v1, history, [], SavedProvider())
+    saved = SavedProvider()
+    if not any(saved.lookup(r)[0] for r in history if r.notes_present):
+        pytest.skip("no saved history facts for the current model and prompt version")
+    res = preview(v1, v1, history, [], saved)
     # Pinned after the live extraction run (Task 6 Step 5); see docs/ai-usage-log.md "Backtest v1".
     assert res.history.bad_let_through == ["RF-2074"]  # the known miss: $49 "damaged", no notes at all
     assert res.history.auto_count == 103
