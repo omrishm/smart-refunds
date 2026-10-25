@@ -1,0 +1,135 @@
+version: 1
+reason: Initial rules from the policy notes (option B, $100 cap)
+published_at: '2026-10-25'
+rules:
+  # ---- Locked safety rules ----
+  - id: S1
+    title: Missing or unreadable data → person
+    locked: true
+    when:
+      - {field: is_valid, op: "=", value: false}
+    then: {kind: route, lane: Other}
+  - id: S2
+    title: Same request ID twice → person, never pay twice
+    locked: true
+    when:
+      - {field: duplicate_id, op: "=", value: true}
+    then: {kind: route, lane: Other}
+  - id: S3
+    title: Note tries to instruct the system → person
+    locked: true
+    when:
+      - {field: facts.instructions_to_system, op: "=", value: "yes"}
+    then: {kind: route, lane: by_reason}
+  - id: S4
+    title: AI unavailable → anything with notes goes to a person
+    locked: true
+    when:
+      - {field: notes_present, op: "=", value: true}
+      - {field: facts_available, op: "=", value: false}
+    then: {kind: route, lane: by_reason}
+  # ---- Policy rules ----
+  - id: R1
+    title: Fraud flag not an explicit "no", or notes mention fraud → Fraud team
+    when:
+      - any_of:
+          - {field: fraud_flag, op: "!=", value: "no"}
+          - {field: facts.fraud_reported, op: "=", value: "yes"}
+          - {field: facts.fraud_confirmed, op: "=", value: "yes"}
+    then: {kind: route, lane: Fraud team}
+    note: Policy 5
+  - id: R2
+    title: Never arrived but carrier has a signature or photo → draft rejection
+    when:
+      - {field: stated_reason, op: "=", value: never_arrived}
+      - {field: facts.carrier_signature_or_photo, op: "=", value: "yes"}
+      - {field: facts.carrier_investigation_open, op: "!=", value: "yes"}
+    then: {kind: route_with_draft_rejection, lane: Delivery disputes, policy: policy_4}
+    note: Policy 4
+  - id: R3
+    title: Never arrived → Delivery disputes
+    when:
+      - {field: stated_reason, op: "=", value: never_arrived}
+    then: {kind: route, lane: Delivery disputes}
+  - id: R4
+    title: Change of mind after 14 days → draft rejection
+    when:
+      - {field: stated_reason, op: "=", value: changed_mind}
+      - {field: days_since_delivery, op: ">", value: 14}
+    then: {kind: route_with_draft_rejection, lane: Policy rejections, policy: policy_2}
+    note: Policy 2
+  - id: R5
+    title: Already refunded elsewhere → draft rejection
+    when:
+      - {field: facts.already_refunded_elsewhere, op: "=", value: "yes"}
+    then: {kind: route_with_draft_rejection, lane: Policy rejections, policy: double_refund}
+  - id: R6
+    title: Note contradicts the claim, or customer admits delivery or fault → person
+    when:
+      - any_of:
+          - {field: facts.reason_contradicts_note, op: "=", value: "yes"}
+          - {field: facts.admits_delivered, op: "=", value: "yes"}
+          - {field: facts.admits_own_fault, op: "=", value: "yes"}
+    then: {kind: route, lane: by_reason}
+  - id: R7
+    title: Wrong item but the shipped item matches the order → draft rejection
+    when:
+      - {field: stated_reason, op: "=", value: wrong_item}
+      - {field: facts.shipped_item_matches_order, op: "=", value: "yes"}
+    then: {kind: route_with_draft_rejection, lane: Other, policy: order_matches}
+  - id: R8
+    title: Customer had refunds in the last 12 months → person
+    when:
+      - {field: prior_refunds_12m, op: ">", value: 0}
+    then: {kind: route, lane: by_reason}
+  - id: R9
+    title: Account younger than 9 months → person
+    when:
+      - {field: tenure_months, op: "<", value: 9}
+    then: {kind: route, lane: by_reason}
+  - id: R10
+    title: Over the $100 auto-approve cap → person
+    when:
+      - {field: amount_usd, op: ">", value: 100}
+    then: {kind: route, lane: by_reason}
+  - id: R11
+    title: Damage over $50 with no photo → Damage & evidence
+    when:
+      - {field: stated_reason, op: "=", value: arrived_damaged}
+      - {field: amount_usd, op: ">", value: 50}
+      - {field: facts.photo_or_video_evidence, op: "!=", value: present}
+    then: {kind: route, lane: Damage & evidence}
+    note: Policy 3
+  - id: R12
+    title: Cosmetic damage only → Damage & evidence (partial is the reviewer's call)
+    when:
+      - {field: stated_reason, op: "=", value: arrived_damaged}
+      - {field: facts.damage_cosmetic_only, op: "=", value: "yes"}
+    then: {kind: route, lane: Damage & evidence}
+    note: Policy 6
+  - id: R13
+    title: Late delivery of $55 or more → Delivery disputes (partial is the reviewer's call)
+    when:
+      - {field: stated_reason, op: "=", value: late_delivery}
+      - {field: amount_usd, op: ">=", value: 55}
+    then: {kind: route, lane: Delivery disputes}
+    note: Policy 6
+  - id: R14
+    title: Wrong item of $55 or more without a confirmed picking error → person
+    when:
+      - {field: stated_reason, op: "=", value: wrong_item}
+      - {field: amount_usd, op: ">=", value: 55}
+      - {field: facts.picking_error_confirmed, op: "!=", value: "yes"}
+    then: {kind: route, lane: by_reason}
+  - id: R15
+    title: Change of mind of $55 or more → person
+    when:
+      - {field: stated_reason, op: "=", value: changed_mind}
+      - {field: amount_usd, op: ">=", value: 55}
+    then: {kind: route, lane: by_reason}
+  # ---- Approve ----
+  - id: A1
+    title: Everything else with a known reason → auto-approve in full
+    when:
+      - {field: stated_reason, op: in, value: [wrong_size, changed_mind, wrong_item, arrived_damaged, late_delivery]}
+    then: {kind: approve}
