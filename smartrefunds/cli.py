@@ -95,6 +95,14 @@ def cmd_backtest(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_reset_demo(args: argparse.Namespace) -> int:
+    from .store import Store
+
+    Store(var_dir=args.var).reset()
+    print(f"demo state in {args.var} cleared; rules back to {DEFAULT_RULES}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="python -m smartrefunds", description="Smart Refunds triage")
     sub = p.add_subparsers(dest="command", required=True)
@@ -119,6 +127,10 @@ def build_parser() -> argparse.ArgumentParser:
     bt.add_argument("--history", default="data/history.csv")
     bt.add_argument("--ai", choices=["auto", "live", "saved", "off"], default="saved")
     bt.set_defaults(func=cmd_backtest)
+
+    rd = sub.add_parser("reset-demo", help="clear demo decisions, payments and published rules")
+    rd.add_argument("--var", default="var")
+    rd.set_defaults(func=cmd_reset_demo)
     return p
 
 
