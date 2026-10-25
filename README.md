@@ -83,7 +83,7 @@ manager screen  → plain English → AI draft → structured rule → preview (
 
 | Command | Purpose |
 |---|---|
-| `python -m smartrefunds run FILE [--ai MODE] [--rules PATH] [--out DIR]` | Decide every request in a CSV |
+| `python -m smartrefunds run FILE [--ai MODE] [--rules PATH] [--out DIR]` | Decide every request in a CSV. Without `--rules` it uses the live version: the newest one published in the demo, else `rules/v1.yaml` |
 | `python -m smartrefunds backtest [--rules PATH] [--ai saved]` | Replay a rule set over history (line-slide evidence) |
 | `python -m smartrefunds extract-facts FILE --out data/facts/NAME.jsonl` | Read notes with the LLM and save facts (paid) |
 | `python -m smartrefunds eval [--models a,b]` | Score the note reader on `eval/cases.jsonl` (paid) |

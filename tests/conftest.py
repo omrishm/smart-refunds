@@ -29,9 +29,11 @@ def make_facts(**overrides) -> Facts:
 
 
 @pytest.fixture(autouse=True)
-def no_api_key(monkeypatch):
-    """Tests never call the API: blank the key so .env (loaded by the CLI and app) can't supply one."""
+def no_api_key(monkeypatch, tmp_path):
+    """Tests never call the API: blank the key so .env (loaded by the CLI and app) can't supply one.
+    Tests also never see the developer's demo state: rules published while clicking through var/ stay out."""
     monkeypatch.setenv("ANTHROPIC_API_KEY", "")
+    monkeypatch.setenv("SMARTREFUNDS_VAR", str(tmp_path / "test-var"))
 
 
 @pytest.fixture

@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -61,10 +62,20 @@ def get_provider(mode: str) -> FactsProvider:
     return make_provider(mode, FACTS_DIR)
 
 
+def rules_path(args: argparse.Namespace) -> str:
+    """--rules if given, else the live version: the newest one published in the demo, else rules/v1.yaml."""
+    from .store import latest_rules_path
+
+    return args.rules or str(latest_rules_path(args.var, DEFAULT_RULES))
+
+
 def cmd_run(args: argparse.Namespace) -> int:
     requests = load_requests(args.csv).requests
     provider = get_provider(args.ai)
-    decisions = decide_all(requests, load_checked_rules(args.rules), provider)
+    path = rules_path(args)
+    rules = load_checked_rules(path)
+    print(f"rules v{rules.version} ({path})")
+    decisions = decide_all(requests, rules, provider)
     out = Path(args.out) / f"decisions_{Path(args.csv).stem}.csv"
     write_decisions_csv(decisions, out)
     print(summarize(decisions, provider.mode))
@@ -114,7 +125,10 @@ def cmd_backtest(args: argparse.Namespace) -> int:
     from .preview import backtest_summary
 
     history = load_requests(args.history).requests
-    print(backtest_summary(load_checked_rules(args.rules), history, get_provider(args.ai)))
+    path = rules_path(args)
+    rules = load_checked_rules(path)
+    print(f"rules v{rules.version} ({path})")
+    print(backtest_summary(rules, history, get_provider(args.ai)))
     return 0
 
 
@@ -156,7 +170,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     run = sub.add_parser("run", help="decide every request in a CSV")
     run.add_argument("csv")
-    run.add_argument("--rules", default=str(DEFAULT_RULES))
+    run.add_argument("--rules", default=None, help="rules file (default: the live version, see --var)")
+    run.add_argument("--var", default=os.environ.get("SMARTREFUNDS_VAR") or "var",
+                     help="demo state folder holding published rule versions")
     run.add_argument("--ai", choices=["auto", "live", "saved", "off"], default="auto")
     run.add_argument("--out", default="out")
     run.set_defaults(func=cmd_run)
@@ -170,7 +186,9 @@ def build_parser() -> argparse.ArgumentParser:
     ex.set_defaults(func=cmd_extract_facts)
 
     bt = sub.add_parser("backtest", help="replay a rule set over history (the line-slide evidence)")
-    bt.add_argument("--rules", default=str(DEFAULT_RULES))
+    bt.add_argument("--rules", default=None, help="rules file (default: the live version, see --var)")
+    bt.add_argument("--var", default=os.environ.get("SMARTREFUNDS_VAR") or "var",
+                    help="demo state folder holding published rule versions")
     bt.add_argument("--history", default="data/history.csv")
     bt.add_argument("--ai", choices=["auto", "live", "saved", "off"], default="saved")
     bt.set_defaults(func=cmd_backtest)

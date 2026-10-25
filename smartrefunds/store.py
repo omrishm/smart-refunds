@@ -29,6 +29,13 @@ CREATE TABLE IF NOT EXISTS case_status (
 """
 
 
+def latest_rules_path(var_dir: str | Path = Path("var"), seed_rules: str | Path = Path("rules/v1.yaml")) -> Path:
+    """The live rule set: the newest version the manager published under var/rules/, else the committed seed."""
+    rules_dir = Path(var_dir) / "rules"
+    published = sorted((int(p.stem[1:]), p) for p in rules_dir.glob("v*.yaml") if p.stem[1:].isdigit())
+    return published[-1][1] if published else Path(seed_rules)
+
+
 @dataclass
 class PaymentResult:
     ok: bool
@@ -147,8 +154,7 @@ class Store:
         return sorted(files)
 
     def live_rules(self) -> RuleSet:
-        published = self._published()
-        return load_rules(published[-1][1] if published else self.seed_rules)
+        return load_rules(latest_rules_path(self.var_dir, self.seed_rules))
 
     def versions(self) -> list[tuple[int, str, str]]:
         seed = load_rules(self.seed_rules)

@@ -82,3 +82,20 @@ def test_cli_bad_rules_file(tmp_path):
         res = cli("run", PENDING, "--ai", "off", "--rules", rules, "--out", str(tmp_path))
         assert res.returncode == 2 and "Traceback" not in res.stderr, res.stderr
         assert res.stderr.strip().startswith("error:")
+
+
+def test_run_uses_the_latest_published_rules(tmp_path):
+    import copy
+
+    from smartrefunds.store import Store
+
+    var = tmp_path / "var"
+    store = Store(var_dir=var)
+    rs = copy.deepcopy(store.live_rules())
+    next(r for r in rs.rules if r.id == "R10").when[0].value = 20  # cap below RF-1069's $25
+    assert store.publish(rs, reason="tiny cap") == 2
+    res = cli("run", PENDING, "--ai", "off", "--var", str(var), "--out", str(tmp_path))
+    assert res.returncode == 0, res.stderr
+    assert "rules v2" in res.stdout and "auto-approved: 0" in res.stdout
+    seed = cli("run", PENDING, "--ai", "off", "--var", str(tmp_path / "empty"), "--out", str(tmp_path))
+    assert "rules v1" in seed.stdout and "auto-approved: 1" in seed.stdout
