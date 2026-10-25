@@ -106,3 +106,35 @@ def test_backtest_command_offline(capsys):
     assert "Backtest on 248 historical requests (AI mode: off)" in out
     assert "Legacy auto-approve rule (actual): 111 (45%)" in out
     assert "bad outcomes: 1 ['RF-2074']" in out
+
+
+def test_describe_outcome_reads_as_what_happened(history):
+    from smartrefunds.preview import describe_outcome
+
+    text = {r.request_id: describe_outcome(r)[0] for r in history}
+    assert text["RF-1005"] == "Approved → chargeback (cost money)"
+    assert text["RF-2020"] == "Rejected → stood"
+    assert text["RF-1008"] == "Rejected → overturned on appeal"
+    assert text["RF-1017"] == "Partial refund (50 percent issued)"
+    assert text["RF-1001"] == "Approved → no issues"
+
+
+def test_similar_cases_lead_with_the_ones_that_cost_money(history):
+    import sys
+    from types import SimpleNamespace
+
+    sys.path.insert(0, "app")
+    import reviewer
+    from smartrefunds.engine import Decision
+    from smartrefunds.notes import SavedProvider
+    from smartrefunds.rules import Outcome
+
+    saved = SavedProvider()
+    if not any(saved.lookup(r)[0] for r in history if r.notes_present):
+        pytest.skip("no saved history facts for the current model and prompt version")
+    pending = load_requests("data/pending.csv").requests
+    r = next(p for p in pending if p.request_id == "RF-2181")
+    d = Decision(r, saved.get(r), Outcome("needs_review", "Delivery disputes", "R2"))
+    rows = reviewer._similar(SimpleNamespace(history=history, history_provider=saved), d)
+    assert [row["What happened"] for row in rows][:2] == ["Approved → chargeback (cost money)"] * 2
+    assert "Outcome" not in rows[0]

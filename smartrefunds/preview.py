@@ -28,6 +28,25 @@ def history_label(r: Request) -> HistoryLabel:
     return "ok"
 
 
+def describe_outcome(r: Request) -> tuple[str, int]:
+    """What happened to a past request, in plain words for a reviewer, plus a sort key (money lost first).
+
+    Unlike history_label (which answers "would a full auto-approval have been a mistake?" for the backtest),
+    this describes the decision that was actually made and what followed it."""
+    note = r.outcome_note.lower()
+    if "chargeback" in note:
+        return "Approved → chargeback (cost money)", 0
+    if r.decision == "rejected" and ("overturned" in note or "refunded on appeal" in note):
+        return "Rejected → overturned on appeal", 1
+    if r.decision == "partial":
+        return f"Partial refund ({r.outcome_note})" if r.outcome_note else "Partial refund", 2
+    if r.decision == "rejected":
+        return "Rejected → stood", 3
+    if r.decision == "approved":
+        return "Approved → no issues", 4
+    return r.decision or "Not decided", 5
+
+
 @dataclass
 class Change:
     request_id: str

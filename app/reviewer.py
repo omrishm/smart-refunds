@@ -7,7 +7,7 @@ import streamlit as st
 
 from smartrefunds.engine import Decision
 from smartrefunds.facts import ESCALATION_FACTS, FACT_LABELS, FACT_NAMES
-from smartrefunds.preview import history_label
+from smartrefunds.preview import describe_outcome
 from smartrefunds.rules import LANES
 
 REASON_CODES = ["", "Customer history", "Evidence in notes", "Policy exception approved by manager",
@@ -124,10 +124,10 @@ def _similar(ctx, d: Decision) -> list[dict]:
             continue
         hf = ctx.history_provider.get(h)
         if hf is not None and getattr(hf, top).value == "yes":
-            out.append({"Request": h.request_id, "$": h.amount_usd, "Decision": h.decision,
-                        "Afterwards": h.outcome_note or "—", "Outcome": history_label(h)})
-    out.sort(key=lambda x: x["Outcome"] == "ok")
-    return out[:3]
+            text, order = describe_outcome(h)
+            out.append((order, {"Request": h.request_id, "$": h.amount_usd, "What happened": text}))
+    out.sort(key=lambda x: x[0])  # cases that cost money first
+    return [row for _, row in out[:3]]
 
 
 CASE_KEYS = ("reason_code", "note", "partial_preset", "partial_amount", "draft_text", "info_what", "move_to")
