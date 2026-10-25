@@ -122,7 +122,7 @@ def _similar(ctx, d: Decision) -> list[dict]:
     for h in ctx.history:
         if h.stated_reason != d.request.stated_reason:
             continue
-        hf = ctx.provider.get(h)
+        hf = ctx.history_provider.get(h)
         if hf is not None and getattr(hf, top).value == "yes":
             out.append({"Request": h.request_id, "$": h.amount_usd, "Decision": h.decision,
                         "Afterwards": h.outcome_note or "—", "Outcome": history_label(h)})

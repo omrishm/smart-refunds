@@ -15,7 +15,7 @@ from smartrefunds.clean import Request, load_requests
 from smartrefunds.engine import Decision, FactsProvider, FixtureProvider, decide_all
 from smartrefunds.facts import Facts
 from smartrefunds.incidents import Incident, find_incidents
-from smartrefunds.notes import make_provider
+from smartrefunds.notes import SavedProvider, make_provider
 from smartrefunds.rules import RuleSet
 from smartrefunds.store import Store
 
@@ -33,11 +33,25 @@ class MemoProvider:
         return self._memo[key]
 
 
+class SplitProvider:
+    """History rows use saved facts only (never the API, so a preview can't trigger paid calls over all of
+    history); today's rows use the normal provider."""
+
+    def __init__(self, history: list[Request], history_provider: FactsProvider, pending_provider: FactsProvider):
+        self._ids = {id(r) for r in history}
+        self.history, self.pending, self.mode = history_provider, pending_provider, pending_provider.mode
+
+    def get(self, r: Request) -> Facts | None:
+        return (self.history if id(r) in self._ids else self.pending).get(r)
+
+
 @dataclass
 class Context:
     history: list[Request]
     pending: list[Request]
-    provider: FactsProvider
+    provider: FactsProvider          # today's queue (may call the API in live/auto mode)
+    history_provider: FactsProvider  # history: saved facts only
+    preview_provider: FactsProvider  # routes each row to the right one of the two
     store: Store
     live: RuleSet
     decisions: list[Decision]
@@ -59,11 +73,12 @@ def _load(pending_path: str, history_path: str, ai: str, facts_dir: str, fixture
     else:
         provider = make_provider(ai, Path(facts_dir))
         source = f"AI mode: {provider.mode} · saved facts in {facts_dir}"
-    return pending, history, MemoProvider(provider), source
+    history_provider = provider if fixture else SavedProvider(Path(facts_dir))
+    return pending, history, MemoProvider(provider), MemoProvider(history_provider), source
 
 
 def load_context() -> Context:
-    pending, history, provider, source = _load(
+    pending, history, provider, history_provider, source = _load(
         _env("SMARTREFUNDS_PENDING", "data/pending.csv"), _env("SMARTREFUNDS_HISTORY", "data/history.csv"),
         _env("SMARTREFUNDS_AI", "auto"), _env("SMARTREFUNDS_FACTS_DIR", "data/facts"),
         os.environ.get("SMARTREFUNDS_FIXTURE_FACTS", ""),
@@ -73,4 +88,5 @@ def load_context() -> Context:
     decisions = decide_all(pending, live, provider)
     open_ids = {d.request.request_id for d in decisions
                 if store.status(d.request.request_id, d.request.row_index) == "open"}
-    return Context(history, pending, provider, store, live, decisions, find_incidents(decisions, open_ids), source)
+    return Context(history, pending, provider, history_provider, SplitProvider(history, history_provider, provider),
+                   store, live, decisions, find_incidents(decisions, open_ids), source)
