@@ -138,3 +138,49 @@ def test_similar_cases_lead_with_the_ones_that_cost_money(history):
     rows = reviewer._similar(SimpleNamespace(history=history, history_provider=saved), d)
     assert [row["What happened"] for row in rows][:2] == ["Approved → chargeback (cost money)"] * 2
     assert "Outcome" not in rows[0]
+
+
+def _with_rule(v1, rule):
+    from smartrefunds.drafting import insert_rule, suggest_position
+
+    return insert_rule(v1, rule, suggest_position(v1, rule))
+
+
+def test_no_effect_names_the_rule_that_already_decides(v1):
+    rule = Rule("M1", "Change of mind after 30 days → draft rejection",
+                [Condition("stated_reason", "=", "changed_mind"), Condition("days_since_delivery", ">", 30)],
+                Action("route_with_draft_rejection", "Policy rejections", "policy_2"))
+    rows = [make_request(request_id=f"RF-C{i}", stated_reason="changed_mind", days_since_delivery=d)
+            for i, d in enumerate([20, 35, 40])]
+    res = preview(_with_rule(v1, rule), v1, rows, [], FixtureProvider(FIXTURE))
+    text = " | ".join(res.warnings)
+    assert text.startswith("No effect on history or today's queue")
+    assert "R4" in text and "Change of mind after 14 days" in text and "2 cases" in text
+    assert res.decided_first_by == {"R4": 2}
+
+
+def test_no_effect_when_the_rule_matches_nothing(v1):
+    rule = Rule("M1", "Huge refunds → person", [Condition("amount_usd", ">", 1_000_000)], Action("route", "Other"))
+    res = preview(_with_rule(v1, rule), v1, [make_request()], [], FixtureProvider(FIXTURE))
+    assert any("matches no past or current request" in w for w in res.warnings)
+
+
+def test_manager_points_to_the_editable_value(v1):
+    import sys
+
+    sys.path.insert(0, "app")
+    import manager
+
+    window = Rule("M1", "Change of mind after 30 days → draft rejection",
+                  [Condition("stated_reason", "=", "changed_mind"), Condition("days_since_delivery", ">", 30)],
+                  Action("route_with_draft_rejection", "Policy rejections", "policy_2"))
+    over_300 = Rule("M1", "Over $300 → person", [Condition("amount_usd", ">", 300)], Action("route", "by_reason"))
+    refunds = Rule("M1", "More than 2 refunds → person", [Condition("prior_refunds_12m", ">", 2)],
+                   Action("route", "by_reason"))
+    late = Rule("M1", "Late over 10 days → person",  # days on another reason: not R4's window
+                [Condition("stated_reason", "=", "late_delivery"), Condition("days_since_delivery", ">", 10)],
+                Action("route", "by_reason"))
+    assert "Change-of-mind window (days)" in manager.edit_hint(window, v1)
+    assert "Auto-approve cap ($)" in manager.edit_hint(over_300, v1)
+    assert "Prior refunds allowed in 12 months" in manager.edit_hint(refunds, v1)
+    assert manager.edit_hint(late, v1) is None

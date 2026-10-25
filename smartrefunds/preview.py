@@ -73,6 +73,8 @@ class PreviewResult:
     history: DatasetPreview
     pending: DatasetPreview
     warnings: list[str]
+    # For a new rule with no effect: earlier rules that already decide the cases it matches (rule id -> count).
+    decided_first_by: dict[str, int] = field(default_factory=dict)
 
 
 def _state(d: Decision) -> str:
@@ -115,8 +117,22 @@ def preview(candidate: RuleSet, live: RuleSet, history: list[Request], pending: 
     hist, pend = _dataset(h_c, h_l, True), _dataset(p_c, p_l, False)
 
     warnings: list[str] = []
+    decided_first_by: dict[str, int] = {}
     if not hist.changed and not pend.changed:
-        warnings.append("No effect on history or today's queue")
+        new_ids = {r.id for r in candidate.rules} - {r.id for r in live.rules}
+        if not new_ids:
+            warnings.append("No effect on history or today's queue")
+        else:
+            counts = Counter(d.outcome.rule_id for d in h_c + p_c
+                             if new_ids & set(d.outcome.matched_rule_ids) and d.outcome.rule_id not in new_ids)
+            decided_first_by = dict(counts.most_common())
+            if not counts:
+                warnings.append("No effect on history or today's queue: this rule matches no past or current request")
+            else:
+                titles = {r.id: r.title for r in candidate.rules}
+                listed = ", ".join(f"{rid} “{titles.get(rid, rid)}” ({n} cases)" for rid, n in counts.most_common(3))
+                warnings.append(f"No effect on history or today's queue: the {sum(counts.values())} cases this rule "
+                                f"matches are already decided by earlier rules: {listed}")
     skipped = Counter(ch.before.split(" (")[0] for ch in hist.changed + pend.changed
                       if ch.after == "auto_approved" and ch.before != "auto_approved")
     for lane, n in sorted(skipped.items()):
@@ -132,7 +148,7 @@ def preview(candidate: RuleSet, live: RuleSet, history: list[Request], pending: 
     new_bad = [rid for rid in hist.bad_let_through if rid not in live_bad]
     if new_bad:
         warnings.append(f"Lets through {len(new_bad)} cases with bad outcomes in history ({', '.join(new_bad)})")
-    return PreviewResult(hist, pend, warnings)
+    return PreviewResult(hist, pend, warnings, decided_first_by)
 
 
 def backtest_summary(rs: RuleSet, history: list[Request], provider: FactsProvider) -> str:

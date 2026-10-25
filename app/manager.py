@@ -29,6 +29,22 @@ FIELD_LABELS = {
 STATE_KEYS = ["draft_result", "choice", "position", "rollback_from", "publish_reason", "change_text"] + [e[0] for e in EDITS]
 
 
+def edit_hint(rule, live: RuleSet) -> str | None:
+    """If a drafted rule tests the same thing as an existing rule with an editable value (same field, and that
+    rule's other conditions also present), the manager most likely wants to change that value instead."""
+    new_conds = [c for c in rule.when if isinstance(c, Condition)]
+    for _, rule_id, field, label in EDITS:
+        existing = next((r for r in live.rules if r.id == rule_id), None)
+        cond = _condition(live, rule_id, field)
+        if existing is None or cond is None or not any(c.field == field for c in new_conds):
+            continue
+        context = [c for c in existing.when if isinstance(c, Condition) and c.field != field]
+        if all(any((n.field, n.op, n.value) == (c.field, c.op, c.value) for n in new_conds) for c in context):
+            return (f"Related setting: {rule_id} “{existing.title}” ({_cond_text(cond)}). If you meant to change "
+                    f"that, edit “{label}” on the left.")
+    return None
+
+
 def _cond_text(c) -> str:
     if isinstance(c, AnyOf):
         return "(" + " or ".join(_cond_text(x) for x in c.conditions) + ")"
@@ -182,6 +198,9 @@ def _preview(ctx, candidate: RuleSet, drafted) -> None:
     m[3].metric("Bad outcomes let through", len(h.bad_let_through))
     for w in res.warnings:
         (st.info if w.startswith("No effect") else st.warning)(w)
+    hint = edit_hint(drafted, ctx.live) if drafted is not None else None
+    if hint:
+        st.info(hint)
     if drafted is not None:
         rows = [(r, ctx.preview_provider.get(r)) for r in ctx.history + ctx.pending]
         over = overridden_rules(ctx.live, candidate, rows)
