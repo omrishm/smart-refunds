@@ -87,6 +87,14 @@ def cmd_extract_facts(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_backtest(args: argparse.Namespace) -> int:
+    from .preview import backtest_summary
+
+    history = load_requests(args.history).requests
+    print(backtest_summary(load_rules(args.rules), history, get_provider(args.ai)))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="python -m smartrefunds", description="Smart Refunds triage")
     sub = p.add_subparsers(dest="command", required=True)
@@ -105,6 +113,12 @@ def build_parser() -> argparse.ArgumentParser:
     ex.add_argument("--effort", default="low")
     ex.add_argument("--yes", action="store_true", help="skip the cost confirmation")
     ex.set_defaults(func=cmd_extract_facts)
+
+    bt = sub.add_parser("backtest", help="replay a rule set over history (the line-slide evidence)")
+    bt.add_argument("--rules", default=str(DEFAULT_RULES))
+    bt.add_argument("--history", default="data/history.csv")
+    bt.add_argument("--ai", choices=["auto", "live", "saved", "off"], default="saved")
+    bt.set_defaults(func=cmd_backtest)
     return p
 
 
