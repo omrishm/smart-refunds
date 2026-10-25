@@ -24,7 +24,8 @@ CREATE TABLE IF NOT EXISTS audit (
 CREATE TABLE IF NOT EXISTS payments (
   request_id TEXT PRIMARY KEY, amount REAL, method TEXT, at TEXT);
 CREATE TABLE IF NOT EXISTS case_status (
-  request_id TEXT, row_index INTEGER, status TEXT, waiting_for TEXT, PRIMARY KEY (request_id, row_index));
+  request_id TEXT, row_index INTEGER, status TEXT, waiting_for TEXT, lane TEXT,
+  PRIMARY KEY (request_id, row_index));
 """
 
 
@@ -102,7 +103,8 @@ class Store:
 
     @staticmethod
     def _set_status(c: sqlite3.Connection, request_id: str, row_index: int, status: str, what: str | None) -> None:
-        c.execute("INSERT INTO case_status VALUES (?,?,?,?) ON CONFLICT(request_id, row_index) DO UPDATE SET "
+        c.execute("INSERT INTO case_status (request_id, row_index, status, waiting_for) VALUES (?,?,?,?) "
+                  "ON CONFLICT(request_id, row_index) DO UPDATE SET "
                   "status = excluded.status, waiting_for = excluded.waiting_for",
                   (request_id, row_index, status, what))
 
@@ -125,6 +127,18 @@ class Store:
     def resume(self, request_id: str, row_index: int) -> None:
         with closing(self._conn()) as c, c:
             self._set_status(c, request_id, row_index, "open", None)
+
+    def set_lane(self, request_id: str, row_index: int, lane: str) -> None:
+        with closing(self._conn()) as c, c:
+            c.execute("INSERT INTO case_status (request_id, row_index, status, lane) VALUES (?,?, 'open', ?) "
+                      "ON CONFLICT(request_id, row_index) DO UPDATE SET lane = excluded.lane",
+                      (request_id, row_index, lane))
+
+    def lane_override(self, request_id: str, row_index: int) -> str | None:
+        with closing(self._conn()) as c:
+            row = c.execute("SELECT lane FROM case_status WHERE request_id = ? AND row_index = ?",
+                            (request_id, row_index)).fetchone()
+        return row["lane"] if row else None
 
     # ---------- rule versions ----------
 

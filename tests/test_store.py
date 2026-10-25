@@ -80,3 +80,11 @@ def test_reset_demo_command(tmp_path):
     s.pay("RF-1", 10.0, "card")
     assert main(["reset-demo", "--var", str(tmp_path / "var")]) == 0
     assert Store(var_dir=tmp_path / "var").payments() == []
+
+
+def test_lane_override(store):
+    assert store.lane_override("RF-1072", 5) is None
+    store.set_lane("RF-1072", 5, "Fraud team")
+    assert store.lane_override("RF-1072", 5) == "Fraud team"
+    store.set_waiting("RF-1072", 5, "photo")
+    assert store.lane_override("RF-1072", 5) == "Fraud team" and store.status("RF-1072", 5) == "waiting"
