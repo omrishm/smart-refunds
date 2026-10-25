@@ -103,6 +103,29 @@ def cmd_reset_demo(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_eval(args: argparse.Namespace) -> int:
+    from . import evaluation, notes
+
+    cases = evaluation.load_cases(args.cases)
+    models = [m.strip() for m in args.models.split(",") if m.strip()]
+    calls = sum(1 for c in cases if c.request.notes_present)
+    total = sum(estimate_cost(calls, m) for m in models)
+    print(f"{len(cases)} cases ({calls} with notes) x {len(models)} model(s): estimated cost ${total:.2f}")
+    if not confirm("Proceed?", args.yes):
+        print("cancelled")
+        return 1
+    results = evaluation.run_eval(models, cases, notes._client_from_env(), PRICES)
+    out = Path(args.out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    for model, res in results.items():
+        (out / f"{date}-{model}.json").write_text(json.dumps(res, indent=2, ensure_ascii=False), encoding="utf-8")
+    summary = evaluation.summary_markdown(results, date)
+    (out / "summary.md").write_text(summary, encoding="utf-8")
+    print(summary)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="python -m smartrefunds", description="Smart Refunds triage")
     sub = p.add_subparsers(dest="command", required=True)
@@ -127,6 +150,13 @@ def build_parser() -> argparse.ArgumentParser:
     bt.add_argument("--history", default="data/history.csv")
     bt.add_argument("--ai", choices=["auto", "live", "saved", "off"], default="saved")
     bt.set_defaults(func=cmd_backtest)
+
+    ev = sub.add_parser("eval", help="score the AI note reader on eval/cases.jsonl (costs money)")
+    ev.add_argument("--models", default="claude-opus-5-5,claude-haiku-5-5")
+    ev.add_argument("--cases", default="eval/cases.jsonl")
+    ev.add_argument("--out-dir", default="eval/results")
+    ev.add_argument("--yes", action="store_true", help="skip the cost confirmation")
+    ev.set_defaults(func=cmd_eval)
 
     rd = sub.add_parser("reset-demo", help="clear demo decisions, payments and published rules")
     rd.add_argument("--var", default="var")
