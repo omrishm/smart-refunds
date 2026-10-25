@@ -33,3 +33,25 @@ README's "how AI coding tools were used" section.
 - **Changed: a test that silently spent money.** Once a real key was in `.env`, the app loaded it during a
   manager-screen test and made one live drafting call (about 1¢). Tests now blank the key with an autouse
   fixture, so no test can reach the API.
+
+## Backtest v1 (saved Opus 5.5 facts, prompt notes-v2)
+
+`python -m smartrefunds backtest --ai saved` on 2026-10-25:
+
+```
+Backtest on 248 historical requests (AI mode: saved)
+  Rule set v1: auto-approves 103 (42%), $3,302.75; bad outcomes let through: 1 ['RF-2074']
+    reviewer minutes saved vs today: 35 of 1119
+    to people by lane: Damage & evidence 38, Delivery disputes 43, Fraud team 20, Other 35, Policy rejections 9
+  Legacy auto-approve rule (actual): 111 (45%), $3,377.13; bad outcomes: 1 ['RF-2074']
+```
+
+- Every chargeback, partial refund and policy rejection in history is routed to a person, except RF-2074 (a $49
+  "damaged" claim with empty notes, which nothing on the page could catch).
+- **14 of the old rule's approvals go to people instead:**
+  - 7 small never-arrived depot claims
+  - 3 damage claims over $50 with no photo
+  - 3 rows with missing or invalid data
+  - RF-2124 ("honestly it's fine")
+- **6 cases humans handled are now automated:** RF-1002, RF-1007, RF-2022, RF-2041, RF-2165 and RF-2174.
+- Facts extraction cost: $3.75 for 205 history rows, plus $0.67 for pending (two runs, notes-v1 and notes-v2).

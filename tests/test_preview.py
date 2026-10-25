@@ -91,7 +91,9 @@ def test_backtest_v1_snapshot(v1, history):
 
     res = preview(v1, v1, history, [], SavedProvider())
     # Pinned after the live extraction run (Task 6 Step 5); see docs/ai-usage-log.md "Backtest v1".
-    assert set(res.history.bad_let_through) <= {"RF-2074"}
+    assert res.history.bad_let_through == ["RF-2074"]  # the known miss: $49 "damaged", no notes at all
+    assert res.history.auto_count == 103
+    assert round(res.history.auto_amount, 2) == 3302.75
 
 
 def test_backtest_command_offline(capsys):
