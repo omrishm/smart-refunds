@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import sys
 from datetime import datetime, timezone
@@ -9,7 +10,9 @@ from pathlib import Path
 
 from .clean import InputFileError, load_requests
 from .engine import FactsProvider, decide_all, summarize, write_decisions_csv
-from .rules import load_rules
+from .rules import RuleSet, load_rules, validate
+
+SAFETY_RULES = {"S1", "S2", "S3", "S4"}
 
 DEFAULT_RULES = Path("rules/v1.yaml")
 FACTS_DIR = Path("data/facts")
@@ -32,6 +35,26 @@ def confirm(prompt: str, yes: bool) -> bool:
         return False
 
 
+class RulesError(Exception):
+    pass
+
+
+def load_checked_rules(path: str) -> RuleSet:
+    try:
+        rs = load_rules(path)
+    except FileNotFoundError:
+        raise RulesError(f"rules file not found: {path}") from None
+    except Exception as e:  # malformed YAML or structure
+        raise RulesError(f"can't read rules file {path}: {e}") from None
+    errors = validate(rs)
+    locked = {r.id for r in rs.rules if r.locked}
+    if not SAFETY_RULES <= locked:
+        errors.append(f"safety rules {', '.join(sorted(SAFETY_RULES - locked))} missing or not locked")
+    if errors:
+        raise RulesError(f"invalid rules file {path}: {'; '.join(errors)}")
+    return rs
+
+
 def get_provider(mode: str) -> FactsProvider:
     from .notes import make_provider
 
@@ -41,7 +64,7 @@ def get_provider(mode: str) -> FactsProvider:
 def cmd_run(args: argparse.Namespace) -> int:
     requests = load_requests(args.csv).requests
     provider = get_provider(args.ai)
-    decisions = decide_all(requests, load_rules(args.rules), provider)
+    decisions = decide_all(requests, load_checked_rules(args.rules), provider)
     out = Path(args.out) / f"decisions_{Path(args.csv).stem}.csv"
     write_decisions_csv(decisions, out)
     print(summarize(decisions, provider.mode))
@@ -91,7 +114,7 @@ def cmd_backtest(args: argparse.Namespace) -> int:
     from .preview import backtest_summary
 
     history = load_requests(args.history).requests
-    print(backtest_summary(load_rules(args.rules), history, get_provider(args.ai)))
+    print(backtest_summary(load_checked_rules(args.rules), history, get_provider(args.ai)))
     return 0
 
 
@@ -174,6 +197,12 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         return args.func(args)
-    except (InputFileError, ConfigError) as e:
+    except (InputFileError, ConfigError, RulesError) as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    except PermissionError as e:
+        print(f"error: can't write {e.filename} (is it open in another program?)", file=sys.stderr)
+        return 2
+    except (OSError, csv.Error) as e:
         print(f"error: {e}", file=sys.stderr)
         return 2

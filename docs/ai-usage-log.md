@@ -83,3 +83,22 @@ Backtest on 248 historical requests (AI mode: saved)
 - **Haiku re-read all history and pending.** The backtest is identical to Opus: 103 auto-approved, $3,302.75, only
   RF-2074 let through.
 - Spend for this round: about $1.13 for the eval and $0.11 for the re-read.
+
+## Final review (fresh reviewer, whole repo)
+
+The reviewer found the evidence check could cancel a fraud escalation. A fraud quote that wasn't verbatim (for
+example translated) was downgraded to "not mentioned", which removed the R1 escalation.
+
+**Fixed, each with a test that failed first:**
+- fraud facts are never downgraded; a failed quote now means the notes are treated as not analysed (S4)
+- photo, picking-error and fraud-confirmed evidence must be a whole phrase from the support note
+- nan, inf, negative or fractional numbers and blank request IDs are invalid
+- rules files are validated, and bad files give one-line CLI errors
+- auto-approvals record a (simulated) payment
+- reviewer-screen amount guards
+- no reason code carries over between cases
+- UK phone numbers are redacted
+
+**Honest caveat raised by the reviewer:** the notes-v4 prompt fix was made after the history backtest exposed
+RF-1021, and was then confirmed on the same history. That is tuning on the answers. The next step is a
+fresh held-out set for prompt changes.

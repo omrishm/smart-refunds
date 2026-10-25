@@ -61,10 +61,12 @@ def test_cache_key_stable_and_sensitive():
 
 
 def test_saved_provider_hit_miss(tmp_path):
-    hit = make_request(customer_note="mug chipped on the rim")
+    hit = make_request(customer_note="mug chipped on the rim", support_note="photos clear")
     miss = make_request(customer_note="something else")
+    f = make_facts(photo_or_video_evidence="present")
+    f.photo_or_video_evidence.evidence = "photos clear"
     rec = {"key": cache_key(hit, notes.DEFAULT_MODEL), "request_id": "RF-TEST", "row_index": 0,
-           "facts": make_facts(photo_or_video_evidence="present").model_dump()}
+           "facts": f.model_dump()}
     (tmp_path / "x.jsonl").write_text(json.dumps(rec) + "\n", encoding="utf-8")
     p = SavedProvider(tmp_path)
     assert p.get(hit).photo_or_video_evidence.value == "present"
@@ -76,7 +78,7 @@ def test_unquoted_approval_evidence_downgraded():
     f = make_facts(photo_or_video_evidence="present", admits_delivered="yes")
     f.photo_or_video_evidence.evidence = "photos clear"
     f.admits_delivered.evidence = "not in the note either"
-    checked, warnings = check_evidence(f, "it arrived broken")
+    checked, warnings = check_evidence(f, "it arrived broken", "")
     assert checked.photo_or_video_evidence.value == "not_mentioned"
     assert checked.admits_delivered.value == "yes"  # escalation facts are never weakened
     assert len(warnings) == 1
@@ -95,9 +97,9 @@ def test_refusal_and_errors_mean_unavailable(behaviour):
 
 def test_live_provider_success_uses_documented_call():
     f = make_facts(photo_or_video_evidence="present")
-    f.photo_or_video_evidence.evidence = "mug chipped"
+    f.photo_or_video_evidence.evidence = "photos clear"
     client = fake_client(response(f))
-    got = LiveProvider(client).get(make_request(customer_note="mug chipped"))
+    got = LiveProvider(client).get(make_request(customer_note="mug chipped", support_note="photos clear"))
     assert got.photo_or_video_evidence.value == "present"
     call = client.beta.messages.calls[0]
     assert call["model"] == "claude-haiku-5-5"  # the default note reader
@@ -157,3 +159,48 @@ def test_extract_facts_writes_jsonl(tmp_path, monkeypatch):
     assert len(lines) == 3
     assert {"key", "request_id", "row_index", "model_requested", "model_answered", "prompt_version",
             "extracted_at", "facts"} <= set(lines[0])
+
+
+def test_failed_fraud_quote_never_removes_the_escalation(v1):
+    from smartrefunds.rules import evaluate
+
+    r = make_request(customer_note="Mi tarjeta fue robada, I did not buy this", amount_usd=40.0)
+    f = make_facts(fraud_reported="yes")
+    f.fraud_reported.evidence = "my card was stolen"  # translated, not verbatim
+    checked, _ = check_evidence(f, r.customer_note, r.support_note)
+    assert checked is None  # treated as "notes not analysed", never as "no fraud"
+    assert evaluate(v1, r, checked).outcome == "needs_review"
+
+
+def test_approval_evidence_must_come_from_the_support_note():
+    f = make_facts(photo_or_video_evidence="present")
+    f.photo_or_video_evidence.evidence = "Photos attached"
+    checked, warnings = check_evidence(f, "Photos attached, refund me", "")
+    assert checked.photo_or_video_evidence.value == "not_mentioned" and warnings
+
+
+def test_short_or_partial_quotes_do_not_count():
+    f = make_facts(photo_or_video_evidence="present")
+    f.photo_or_video_evidence.evidence = "photo"
+    checked, _ = check_evidence(f, "", "customer refused to send a photograph")
+    assert checked.photo_or_video_evidence.value == "not_mentioned"
+
+
+def test_quote_labels_from_the_prompt_are_stripped():
+    f = make_facts(photo_or_video_evidence="present")
+    f.photo_or_video_evidence.evidence = "Support agent note: photos clear"
+    checked, _ = check_evidence(f, "", "photos clear")
+    assert checked.photo_or_video_evidence.value == "present"
+
+
+def test_saved_facts_are_rechecked_on_load(tmp_path):
+    r = make_request(customer_note="Photos attached, refund me")
+    f = make_facts(photo_or_video_evidence="present")
+    f.photo_or_video_evidence.evidence = "Photos attached"
+    rec = {"key": cache_key(r, notes.DEFAULT_MODEL), "request_id": "RF-TEST", "row_index": 0, "facts": f.model_dump()}
+    (tmp_path / "x.jsonl").write_text(json.dumps(rec) + "\n", encoding="utf-8")
+    assert SavedProvider(tmp_path).get(r).photo_or_video_evidence.value == "not_mentioned"
+
+
+def test_uk_local_phone_numbers_are_redacted():
+    assert "900123" not in redact("call me on 07700 900123 after six")

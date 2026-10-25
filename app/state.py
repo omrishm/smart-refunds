@@ -86,6 +86,9 @@ def load_context() -> Context:
     store = Store(var_dir=_env("SMARTREFUNDS_VAR", "var"))
     live = store.live_rules()
     decisions = decide_all(pending, live, provider)
+    for d in decisions:  # auto-approvals go live: record the (simulated) refund, at most once per request
+        if d.outcome.outcome == "auto_approved" and d.request.amount_usd is not None:
+            store.pay(d.request.request_id, d.request.amount_usd, d.request.payment_method or "original method")
     open_ids = {d.request.request_id for d in decisions
                 if store.status(d.request.request_id, d.request.row_index) == "open"}
     return Context(history, pending, provider, history_provider, SplitProvider(history, history_provider, provider),

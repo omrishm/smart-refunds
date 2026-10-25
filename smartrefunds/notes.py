@@ -25,7 +25,7 @@ from typing import Any, Literal
 
 from .clean import Request
 from .engine import FactsProvider, OffProvider
-from .facts import APPROVAL_EVIDENCE_FACTS, FACT_NAMES, Facts
+from .facts import APPROVAL_EVIDENCE_FACTS, ESCALATION_FACTS, FACT_NAMES, SUPPORT_ONLY_EVIDENCE, Facts
 from .places import normalise_place
 
 PROMPT_VERSION = "notes-v4"
@@ -38,7 +38,9 @@ MAX_TOKENS = 4096
 _EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
 _CARD_ENDING = re.compile(r"(card\s+ending\s+(?:in\s+)?)\d{4}", re.IGNORECASE)
 _CARD = re.compile(r"\b\d(?:[ -]?\d){11,18}\b")
-_PHONE = re.compile(r"\+\d[\d\s().-]{6,}\d|\b\d{3}[\s.-]\d{3}[\s.-]\d{4}\b")
+_PHONE = re.compile(r"\+\d[\d\s().-]{6,}\d|\b\d{3}[\s.-]\d{3}[\s.-]\d{4}\b|\b0\d{3,4}[\s.-]?\d{6,7}\b")
+_QUOTE_LABEL = re.compile(r"^\s*(customer note|support agent note|support note)\s*:\s*", re.IGNORECASE)
+MIN_QUOTE = {"location_tag": 3}  # other facts: 6 characters, so "photo" alone never counts
 _NEGATIVE = {"not_mentioned", "no", "absent", None}
 
 SYSTEM_PROMPT = """You read refund-request notes for an online retailer and extract a fixed set of facts.
@@ -124,19 +126,34 @@ def empty_facts() -> Facts:
     return Facts.model_validate(data)
 
 
-def check_evidence(facts: Facts, redacted_notes: str) -> tuple[Facts, list[str]]:
-    """Downgrade approval-supporting facts whose quote isn't in the notes. Escalation facts are kept."""
+def _quoted(name: str, quote: str, haystack: str) -> bool:
+    q = _QUOTE_LABEL.sub("", quote).strip().strip("\"'\u201c\u201d").strip().lower()
+    if len(q) < MIN_QUOTE.get(name, 6):
+        return False
+    return re.search(r"(?<!\w)" + re.escape(q) + r"(?!\w)", haystack.lower()) is not None
+
+
+def check_evidence(facts: Facts, customer_note: str, support_note: str) -> tuple[Facts | None, list[str]]:
+    """Approval-supporting facts must quote the (redacted) notes as a whole phrase; photo, picking-error and
+    fraud-confirmed evidence must come from the support note, since a customer can't vouch for their own claim.
+
+    A failed quote on a pure approval fact downgrades it. A failed quote on a fact that can also ESCALATE
+    (fraud reported or confirmed) is never downgraded, which would remove the escalation: the whole result is
+    treated as unavailable instead (None), so safety rule S4 sends the request to a person."""
     facts = facts.model_copy(deep=True)
-    haystack = redacted_notes.lower()
     warnings = []
     for name in APPROVAL_EVIDENCE_FACTS:
         fact = getattr(facts, name)
         if fact.value in _NEGATIVE:
             continue
-        quote = fact.evidence.strip().lower()
-        if not quote or quote not in haystack:
-            warnings.append(f"{name}: evidence {fact.evidence!r} not found in notes; ignored")
-            fact.value = None if name == "location_tag" else "not_mentioned"
+        haystack = support_note if name in SUPPORT_ONLY_EVIDENCE else customer_note + "\n" + support_note
+        if _quoted(name, fact.evidence, haystack):
+            continue
+        if name in ESCALATION_FACTS:
+            warnings.append(f"{name}: evidence {fact.evidence!r} not verified; facts treated as unavailable")
+            return None, warnings
+        warnings.append(f"{name}: evidence {fact.evidence!r} not verified; ignored")
+        fact.value = None if name == "location_tag" else "not_mentioned"
     return facts, warnings
 
 
@@ -160,7 +177,11 @@ class SavedProvider:
         rec = self.records.get(cache_key(r, self.model))
         if rec is None:
             return False, None
-        return True, Facts.model_validate(rec["facts"]) if rec.get("facts") else None
+        if not rec.get("facts"):
+            return True, None
+        customer, support = _notes(r)
+        facts, _ = check_evidence(Facts.model_validate(rec["facts"]), customer, support)  # same check as live
+        return True, facts
 
     def get(self, r: Request) -> Facts | None:
         return self.lookup(r)[1]
@@ -203,7 +224,10 @@ class LiveProvider:
             self.last_error = "no valid structured output"
             return None
         customer, support = _notes(r)
-        facts, self.last_warnings = check_evidence(resp.parsed_output, customer + "\n" + support)
+        facts, self.last_warnings = check_evidence(resp.parsed_output, customer, support)
+        if facts is None:
+            self.last_error = "evidence check failed"
+            return None
         facts.location_tag.value = normalise_place(facts.location_tag.value)  # spelling variants handled in code
         return facts
 

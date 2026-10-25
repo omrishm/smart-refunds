@@ -73,3 +73,12 @@ def test_cli_bad_input(tmp_path):
         assert "Traceback" not in res.stderr
         lines = [l for l in res.stderr.splitlines() if l.strip()]
         assert len(lines) == 1 and lines[0].startswith("error:")
+
+
+def test_cli_bad_rules_file(tmp_path):
+    bad = tmp_path / "rules.yaml"
+    bad.write_text("version: 1\nrules: [ {id: X, title: t, when: [], then: {kind: approve}} ]\n", encoding="utf-8")
+    for rules in [str(tmp_path / "missing.yaml"), str(bad)]:
+        res = cli("run", PENDING, "--ai", "off", "--rules", rules, "--out", str(tmp_path))
+        assert res.returncode == 2 and "Traceback" not in res.stderr, res.stderr
+        assert res.stderr.strip().startswith("error:")

@@ -130,7 +130,21 @@ def _similar(ctx, d: Decision) -> list[dict]:
     return out[:3]
 
 
+CASE_KEYS = ("reason_code", "note", "partial_preset", "partial_amount", "draft_text", "info_what", "move_to")
+
+
+def _reset_case_widgets(d: Decision) -> None:
+    """A reason code or message typed on one case must never carry over to the next."""
+    key = (d.request.request_id, d.request.row_index)
+    if st.session_state.get("_open_case") != key:
+        for k in list(st.session_state.keys()):
+            if k in CASE_KEYS or (isinstance(k, str) and k.startswith("fb_")):
+                del st.session_state[k]
+        st.session_state["_open_case"] = key
+
+
 def _case(ctx, d: Decision, role: str, waiting: bool) -> None:
+    _reset_case_widgets(d)
     r, o = d.request, d.outcome
     left, right = st.columns([1.4, 1])
     with left:
@@ -211,14 +225,19 @@ def _actions(ctx, d: Decision, role: str) -> None:
         st.session_state["flash"] = ("ok", result.message)
         st.rerun()
 
-    if st.button("Approve in full", key="approve_full", type="primary"):
+    if r.amount_usd is None:
+        st.caption("The amount couldn't be read, so this request can't be approved in full. Use a partial "
+                   "refund with the correct amount, or reject.")
+    if st.button("Approve in full", key="approve_full", type="primary", disabled=r.amount_usd is None):
         pay_and_record("approve_full", r.amount_usd or 0.0)
 
     with st.expander("Approve partial"):
         preset = st.radio("Preset", PARTIAL_PRESETS, horizontal=True, key="partial_preset")
         pct = {"25%": 0.25, "30%": 0.30, "50%": 0.50}.get(preset)
         default = round((r.amount_usd or 0) * pct, 2) if pct else 0.0
-        amount = st.number_input("Amount to refund ($)", min_value=0.0, value=default, key="partial_amount")
+        cap = r.amount_usd if r.amount_usd is not None else 10_000.0
+        amount = st.number_input("Amount to refund ($)", min_value=0.0, max_value=float(cap), value=min(default, cap),
+                                 key="partial_amount")
         if st.button("Approve partial", key="approve_partial"):
             pay_and_record("approve_partial", amount)
 

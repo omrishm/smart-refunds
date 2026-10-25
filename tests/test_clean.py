@@ -132,3 +132,13 @@ def test_encodings(tmp_path, encoding):
     (r,) = load_requests(write_csv(tmp_path / "x.csv", [row], encoding=encoding)).requests
     assert r.request_id == "RF-9001"
     assert r.customer_note == "café was cold"
+
+
+@pytest.mark.parametrize("col,raw", [
+    ("tenure_months", "nan"), ("tenure_months", "-3"), ("tenure_months", "inf"),
+    ("days_since_delivery", "nan"), ("prior_refunds_12m", "nan"), ("prior_refunds_12m", "inf"),
+    ("prior_refunds_12m", "-3"), ("prior_refunds_12m", "0.5"), ("request_id", "  "),
+])
+def test_unsafe_numbers_and_blank_ids_are_invalid(tmp_path, col, raw):
+    (r,) = load_requests(write_csv(tmp_path / "x.csv", [dict(GOOD_ROW, **{col: raw})])).requests
+    assert not r.is_valid, (col, raw)

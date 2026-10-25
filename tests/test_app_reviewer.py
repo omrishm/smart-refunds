@@ -72,7 +72,7 @@ def test_approve_writes_audit_and_payment(var):
     at.button(key="approve_full").click().run()
     store = Store(var_dir=var)
     assert len(store.audit("RF-1076")) == 1
-    assert [p["request_id"] for p in store.payments()] == ["RF-1076"]
+    assert [p["request_id"] for p in store.payments()].count("RF-1076") == 1
     assert "Damage & evidence (1)" in at.radio(key="lane").options
 
 
@@ -81,7 +81,8 @@ def test_override_requires_reason_code(var):
     at.button(key="approve_full").click().run()
     assert any("reason" in e.value.lower() for e in at.error)
     store = Store(var_dir=var)
-    assert store.audit("RF-2181") == [] and store.payments() == []
+    assert store.audit("RF-2181") == []
+    assert "RF-2181" not in [p["request_id"] for p in store.payments()]
 
 
 def test_duplicate_copy_payment_refused(var):
@@ -90,7 +91,7 @@ def test_duplicate_copy_payment_refused(var):
     at = open_case(at, "Other", "RF-2183", copy=0)  # the remaining copy is now first in the list
     at.button(key="approve_full").click().run()
     assert any("already refunded" in e.value for e in at.error)
-    assert len(Store(var_dir=var).payments()) == 1
+    assert [p["request_id"] for p in Store(var_dir=var).payments()].count("RF-2183") == 1
 
 
 def test_injection_warning_shown(var):
@@ -106,3 +107,28 @@ def test_request_info_moves_to_waiting_and_resume(var):
     at = open_case(at, "Waiting", "RF-1076")
     at.button(key="resume").click().run()
     assert "Waiting (0)" in at.radio(key="lane").options
+
+
+def test_auto_approvals_are_paid_once(var):
+    start()
+    start()  # a second load must not pay again
+    paid = [p["request_id"] for p in Store(var_dir=var).payments()]
+    assert sorted(paid) == ["RF-1069", "RF-1071", "RF-2198"]
+
+
+def test_reason_code_does_not_carry_over_between_cases(var):
+    at = open_case(start(), "Delivery disputes", "RF-2181")
+    at.selectbox(key="reason_code").set_value("Customer history").run()
+    at = open_case(at, "Delivery disputes", "RF-1073")
+    assert at.selectbox(key="reason_code").value == ""
+
+
+def test_unreadable_amount_cannot_be_approved_in_full(var, tmp_path, monkeypatch):
+    src = Path("data/pending.csv").read_text(encoding="utf-8").splitlines()
+    row = src[3].split(",")  # RF-1069
+    row[0], row[5] = "RF-9999", "abc"
+    csv_path = tmp_path / "pending.csv"
+    csv_path.write_text("\n".join(src + [",".join(row)]) + "\n", encoding="utf-8")
+    monkeypatch.setenv("SMARTREFUNDS_PENDING", str(csv_path))
+    at = open_case(start(), "Other", "RF-9999")
+    assert at.button(key="approve_full").disabled

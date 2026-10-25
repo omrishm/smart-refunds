@@ -54,6 +54,9 @@ FACT_NAMES: tuple[str, ...] = tuple(
 APPROVAL_EVIDENCE_FACTS = (
     "photo_or_video_evidence", "picking_error_confirmed", "fraud_confirmed", "fraud_reported", "location_tag",
 )
+# Approval evidence a customer can't supply about their own claim: it must be quoted from the support note.
+SUPPORT_ONLY_EVIDENCE = ("photo_or_video_evidence", "picking_error_confirmed", "fraud_confirmed")
+
 # Plain-English labels for screens.
 FACT_LABELS = {
     "photo_or_video_evidence": "Photo or video evidence",

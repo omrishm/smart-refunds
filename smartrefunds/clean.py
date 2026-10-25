@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import csv
 import io
+import math
 import re
 from dataclasses import dataclass, field, replace
 from datetime import date, datetime
@@ -106,10 +107,13 @@ def normalise_flag(raw: str) -> FraudFlag:
 
 
 def _number(raw: str) -> float | None:
+    """A finite number, or None. nan/inf are rejected: every comparison with nan is False, so it would slip past
+    threshold rules."""
     try:
-        return float((raw or "").strip())
+        v = float((raw or "").strip())
     except ValueError:
         return None
+    return v if math.isfinite(v) else None
 
 
 def _decided_at(raw: str) -> datetime | None:
@@ -170,6 +174,8 @@ def _clean_row(i: int, raw: dict[str, str]) -> Request:
     tenure = _number(raw["tenure_months"])
     if tenure is None:
         invalid.append("tenure_months missing or unreadable")
+    elif tenure < 0:
+        invalid.append(f"tenure_months negative ({_fmt(tenure)})")
     days = _number(raw["days_since_delivery"])
     if days is None:
         invalid.append("days_since_delivery missing or unreadable")
@@ -178,9 +184,14 @@ def _clean_row(i: int, raw: dict[str, str]) -> Request:
     prior = _number(raw["prior_refunds_12m"])
     if prior is None:
         invalid.append("prior_refunds_12m missing or unreadable")
+    elif prior < 0 or not prior.is_integer():
+        invalid.append(f"prior_refunds_12m must be a whole number of 0 or more ('{raw['prior_refunds_12m']}')")
+        prior = None
     customer = (raw["customer_id"] or "").strip() or None
     if customer is None:
         invalid.append("customer_id missing")
+    if not (raw["request_id"] or "").strip():
+        invalid.append("request_id missing")
 
     return Request(
         row_index=i,
