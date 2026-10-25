@@ -1,0 +1,9 @@
+.venv/
+.idea/
+.superpowers/
+var/
+out/
+.env
+__pycache__/
+.pytest_cache/
+recieved_files/
