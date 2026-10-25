@@ -115,7 +115,9 @@ hand-labelled cases:
 | Opus 5.5 | 94% | 0 | 1.9¢ |
 
 All three flagged every planted instruction and matched the expected routing on every case. The cheapest won, and the
-backtest over all 248 past decisions confirmed it: identical to Opus, with only the one uncatchable miss.
+backtest over all 248 past decisions confirmed it: at the $100 cap Haiku gives the same outcome as Opus on every case.
+Above $200 they differ on one case (RF-2082, liquid damage that Opus flags and Haiku misses), so the cap also acts as
+a second safety layer behind the note reader.
 
 ## How AI coding tools were used
 

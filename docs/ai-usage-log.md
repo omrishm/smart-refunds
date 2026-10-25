@@ -116,3 +116,16 @@ Five live calls, about 17¢ in total:
 - **One finding changed the product.** "Accept change-of-mind returns up to 30 days" drafted a new rule that
   changed nothing, because R4 rejects from day 15 first. The preview said only "No effect". It now names the
   rules that already decide those cases, and points to the related editable value (R4's window).
+
+## Slide fact-check after the walkthrough
+
+All slide numbers were re-checked against the code and data.
+
+**Corrected:**
+- "Moving the cap from $55 to $300 changes no outcome" was wrong.
+  - Raising it to $200 adds 6 approvals and no new bad outcome.
+  - At $300, RF-2082 gets through: a $210 claim with liquid damage, which Haiku didn't flag as contradicting the
+    claim and Opus did.
+- The old rule approved 4 rows with missing or invalid data, not 3.
+
+**Confirmed:** at the $100 cap, Haiku and Opus give the same outcome on every one of the 248 past decisions.
