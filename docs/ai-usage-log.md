@@ -102,3 +102,17 @@ example translated) was downgraded to "not mentioned", which removed the R1 esca
 **Honest caveat raised by the reviewer:** the notes-v4 prompt fix was made after the history backtest exposed
 RF-1021, and was then confirmed on the same history. That is tuning on the answers. The next step is a
 fresh held-out set for prompt changes.
+
+## Live test of rule drafting (Opus 5.5)
+
+Until now, rule drafting had only been tested with a fake client and the two hand-written saved drafts.
+
+Five live calls, about 17¢ in total:
+- **Four calls worked.** The model asked sensible clarifying questions. Example: for Northfield, "should refunds
+  still be held back when the carrier has a signature or photo?" Every candidate rule passed validation.
+- **One call failed with a bare `TypeError`.** The cause is unknown: the request, the conversion of later answers
+  and the code after the call were all ruled out. Only the exception type had been kept. Failures now keep the
+  message and log the full traceback, and the manager screen still fails safe.
+- **One finding changed the product.** "Accept change-of-mind returns up to 30 days" drafted a new rule that
+  changed nothing, because R4 rejects from day 15 first. The preview said only "No effect". It now names the
+  rules that already decide those cases, and points to the related editable value (R4's window).
