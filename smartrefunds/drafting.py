@@ -113,12 +113,16 @@ def insert_rule(rs: RuleSet, rule: Rule, position: int) -> RuleSet:
 
 
 def overridden_rules(live: RuleSet, candidate: RuleSet, rows: list[tuple[Request, Facts | None]]) -> list[str]:
-    ids = set()
+    """Every live check the change skips for the cases whose outcome changes: all the non-approve rules those
+    cases matched, not only the one that used to decide them. In list order."""
+    ids: set[str] = set()
     for r, facts in rows:
         before, after = evaluate(live, r, facts), evaluate(candidate, r, facts)
         if (before.outcome, before.lane, before.draft_rejection) != (after.outcome, after.lane, after.draft_rejection):
-            ids.add(before.rule_id)
-    return sorted(ids)
+            ids.update(before.matched_rule_ids)
+    order = {rule.id: i for i, rule in enumerate(live.rules)}
+    kinds = {rule.id: rule.then.kind for rule in live.rules}
+    return sorted((i for i in ids if kinds.get(i) != "approve"), key=lambda i: order.get(i, len(order)))
 
 
 def _checked(text: str, question: str | None, rules: list[tuple[str, Rule]], live: RuleSet,

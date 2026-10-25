@@ -205,7 +205,9 @@ def _preview(ctx, candidate: RuleSet, drafted) -> None:
         rows = [(r, ctx.preview_provider.get(r)) for r in ctx.history + ctx.pending]
         over = overridden_rules(ctx.live, candidate, rows)
         if over:
-            st.caption("Overrides for the matching cases: " + ", ".join(over) + " · safety rules S1–S4 still apply")
+            titles = {r.id: r.title for r in ctx.live.rules}
+            st.warning("For the cases that change, this skips: " + "; ".join(f"{i} “{titles[i]}”" for i in over)
+                       + ". Safety rules S1–S4 still apply.")
     table = [{"Where": "today's queue", "Request": c.request_id, "$": c.amount, "Now": c.before, "After change": c.after}
              for c in res.pending.changed]
     table += [{"Where": "history", "Request": c.request_id, "$": c.amount, "Now": c.before, "After change": c.after}

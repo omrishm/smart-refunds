@@ -92,7 +92,8 @@ def test_overridden_rules_stolen(v1, pending):
     rule = draft_rule(STOLEN, v1).choices[1].rule
     cand = insert_rule(v1, rule, suggest_position(v1, rule))
     assert cand.version == v1.version + 1 and [r.id for r in cand.rules][4] == "M1"
-    assert overridden_rules(v1, cand, _rows(pending)) == ["R1"]
+    # every check these cases would otherwise hit, in list order, not just the one that used to decide
+    assert overridden_rules(v1, cand, _rows(pending)) == ["R1", "R3", "R9", "R10"]
     res = preview(cand, v1, [], pending, FixtureProvider(FIXTURE))
     assert {c.request_id for c in res.pending.changed} == {"RF-2182", "RF-1070"}
 
