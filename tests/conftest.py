@@ -28,6 +28,12 @@ def make_facts(**overrides) -> Facts:
     return Facts.model_validate(data)
 
 
+@pytest.fixture(autouse=True)
+def no_api_key(monkeypatch):
+    """Tests never call the API: blank the key so .env (loaded by the CLI and app) can't supply one."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "")
+
+
 @pytest.fixture
 def v1():
     from smartrefunds.rules import load_rules

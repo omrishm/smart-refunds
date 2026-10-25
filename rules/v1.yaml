@@ -46,6 +46,12 @@ rules:
       - {field: facts.carrier_investigation_open, op: "!=", value: "yes"}
     then: {kind: route_with_draft_rejection, lane: Delivery disputes, policy: policy_4}
     note: Policy 4
+  - id: R2b
+    title: Never arrived, but the customer admits it did → person
+    when:
+      - {field: stated_reason, op: "=", value: never_arrived}
+      - {field: facts.admits_delivered, op: "=", value: "yes"}
+    then: {kind: route, lane: Delivery disputes}
   - id: R3
     title: Never arrived → Delivery disputes
     when:
@@ -64,11 +70,10 @@ rules:
       - {field: facts.already_refunded_elsewhere, op: "=", value: "yes"}
     then: {kind: route_with_draft_rejection, lane: Policy rejections, policy: double_refund}
   - id: R6
-    title: Note contradicts the claim, or customer admits delivery or fault → person
+    title: Note contradicts the claim, or customer admits causing the damage → person
     when:
       - any_of:
           - {field: facts.reason_contradicts_note, op: "=", value: "yes"}
-          - {field: facts.admits_delivered, op: "=", value: "yes"}
           - {field: facts.admits_own_fault, op: "=", value: "yes"}
     then: {kind: route, lane: by_reason}
   - id: R7

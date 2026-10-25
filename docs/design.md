@@ -236,10 +236,11 @@ auto-approved.
 | S4 🔒 | notes non-empty and AI facts unavailable | route by_reason |
 | R1 | fraud_flag ≠ no (yes or unknown), or AI `fraud_reported` / `fraud_confirmed` | route → Fraud team |
 | R2 | reason = never_arrived and AI `carrier_signature_or_photo` = yes and `carrier_investigation_open` ≠ yes | draft rejection, policy 4 → Delivery disputes |
+| R2b | reason = never_arrived and AI `admits_delivered` | route → Delivery disputes ("customer admits it arrived") |
 | R3 | reason = never_arrived | route → Delivery disputes |
 | R4 | reason = changed_mind and days_since_delivery > 14 | draft rejection, policy 2 → Policy rejections |
 | R5 | AI `already_refunded_elsewhere` | draft rejection (double refund) → Policy rejections |
-| R6 | AI `reason_contradicts_note`, `admits_delivered` or `admits_own_fault` | route by_reason |
+| R6 | AI `reason_contradicts_note` or `admits_own_fault` | route by_reason |
 | R7 | reason = wrong_item and AI `shipped_item_matches_order` | draft rejection ("shipped item matches order") → Other |
 | R8 | prior_refunds_12m > **0** | route by_reason |
 | R9 | tenure_months < **9** | route by_reason |

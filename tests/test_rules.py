@@ -5,7 +5,7 @@ import pytest
 from conftest import make_facts, make_request
 from smartrefunds.rules import Action, Condition, Rule, RuleSet, evaluate, matches, validate
 
-V1_ORDER = ["S1", "S2", "S3", "S4"] + [f"R{i}" for i in range(1, 16)] + ["A1"]
+V1_ORDER = ["S1", "S2", "S3", "S4", "R1", "R2", "R2b"] + [f"R{i}" for i in range(3, 16)] + ["A1"]
 
 # (request overrides, fact overrides or None for "no facts") -> (outcome, lane, rule_id, has_draft)
 PENDING_TRACES = {
@@ -107,8 +107,15 @@ def test_validate_errors(v1):
     assert "field" in _bad(v1, lambda rs: rs.rules.insert(4, new([Condition("colour", "=", "red")], Action("route", "Other"))))
     assert "operator" in _bad(v1, lambda rs: rs.rules.insert(4, new([Condition("amount_usd", "~", 1)], Action("route", "Other"))))
     assert "at least one condition" in _bad(v1, lambda rs: rs.rules.insert(4, new([], Action("approve"))))
-    assert "negative" in _bad(v1, lambda rs: setattr(rs.rules[13].when[0], "value", -5))   # R10 cap
+    assert "negative" in _bad(v1, lambda rs: setattr(next(r for r in rs.rules if r.id == "R10").when[0], "value", -5))
     assert "locked" in _bad(v1, lambda rs: setattr(rs.rules[0], "title", "changed"))
     assert "locked" in _bad(v1, lambda rs: rs.rules.pop(1))
     assert "safety rules" in _bad(v1, lambda rs: rs.rules.insert(0, new([Condition("amount_usd", ">", 1)], Action("route", "Other"))))
     assert "lane" in _bad(v1, lambda rs: rs.rules.insert(4, new([Condition("amount_usd", ">", 1)], Action("route", "Nowhere"))))
+
+
+def test_admits_delivered_only_counts_for_never_arrived(v1):
+    late = make_request(stated_reason="late_delivery", amount_usd=52.0, tenure_months=18, support_note="arrived late")
+    assert evaluate(v1, late, make_facts(admits_delivered="yes")).rule_id == "A1"
+    gone = make_request(stated_reason="never_arrived", amount_usd=52.0, support_note="it did turn up")
+    assert evaluate(v1, gone, make_facts(admits_delivered="yes")).rule_id == "R2b"

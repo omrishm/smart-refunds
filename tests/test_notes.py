@@ -57,7 +57,7 @@ def test_cache_key_stable_and_sensitive():
     r = make_request(customer_note="mug chipped")
     assert cache_key(r, "claude-opus-5-5") == cache_key(r, "claude-opus-5-5")
     assert cache_key(r, "claude-opus-5-5") != cache_key(r, "claude-haiku-5-5")
-    assert cache_key(r, "claude-opus-5-5") != cache_key(r, "claude-opus-5-5", prompt_version="notes-v2")
+    assert cache_key(r, "claude-opus-5-5") != cache_key(r, "claude-opus-5-5", prompt_version="notes-v99")
 
 
 def test_saved_provider_hit_miss(tmp_path):

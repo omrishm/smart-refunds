@@ -15,7 +15,7 @@ def var(tmp_path, monkeypatch):
     monkeypatch.setenv("SMARTREFUNDS_FIXTURE_FACTS", "tests/fixtures/pending_facts.jsonl")
     monkeypatch.setenv("SMARTREFUNDS_VAR", str(tmp_path / "var"))
     monkeypatch.setenv("SMARTREFUNDS_AI", "off")
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "")
     return tmp_path / "var"
 
 

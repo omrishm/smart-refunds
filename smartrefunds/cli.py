@@ -15,7 +15,7 @@ DEFAULT_RULES = Path("rules/v1.yaml")
 FACTS_DIR = Path("data/facts")
 # $ per 1M tokens (input, output) and a rough per-request size, for cost estimates printed before paid runs.
 PRICES = {"claude-opus-5-5": (4.00, 20.00), "claude-haiku-5-5": (0.10, 0.50)}
-EST_TOKENS = (2000, 400)
+EST_TOKENS = (2500, 450)  # measured on pending.csv: ~2,400 in / ~450 out
 
 
 def estimate_cost(n: int, model: str) -> float:

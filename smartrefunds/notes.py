@@ -27,7 +27,7 @@ from .clean import Request
 from .engine import FactsProvider, OffProvider
 from .facts import APPROVAL_EVIDENCE_FACTS, FACT_NAMES, Facts
 
-PROMPT_VERSION = "notes-v1"
+PROMPT_VERSION = "notes-v2"
 DEFAULT_MODEL = "claude-opus-5-5"
 FALLBACK_BETA = "server-side-fallback-2026-07-01"
 MAX_TOKENS = 4096
@@ -59,7 +59,8 @@ Facts:
 - fraud_confirmed: the fraud team or the bank confirmed the fraud.
 - picking_error_confirmed: the warehouse or support confirmed we sent the wrong item (mis-pick).
 - shipped_item_matches_order: support checked and the shipped item matches what was ordered.
-- admits_delivered: the customer admits the parcel actually arrived.
+- admits_delivered: ONLY for never-arrived claims: the customer admits the parcel did arrive after all.
+  For any other stated reason the parcel obviously arrived, so answer "not_mentioned".
 - admits_own_fault: the customer admits they caused the damage.
 - already_refunded_elsewhere: the customer says they were already refunded or compensated elsewhere.
 - reason_contradicts_note: the notes contradict the stated reason (e.g. "damaged" but "it's fine").
