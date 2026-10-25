@@ -103,3 +103,17 @@ def test_over_300_no_effect(v1, pending):
     res = preview(cand, v1, [], pending, FixtureProvider(FIXTURE))
     assert res.pending.changed == []
     assert overridden_rules(v1, cand, _rows(pending)) == []
+
+
+def test_live_failure_keeps_the_error_message(v1, caplog):
+    import logging
+
+    class Boom:
+        def parse(self, **kw):
+            raise TypeError("'NoneType' object is not iterable")
+
+    client = SimpleNamespace(beta=SimpleNamespace(messages=Boom()))
+    with caplog.at_level(logging.ERROR, logger="smartrefunds.drafting"):
+        d = draft_rule("send odd ones to us", v1, client=client)
+    assert "TypeError: 'NoneType' object is not iterable" in d.error
+    assert any("Traceback" in (r.exc_text or "") or r.exc_info for r in caplog.records)

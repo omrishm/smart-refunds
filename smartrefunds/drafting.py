@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import copy
 import json
+import logging
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -24,6 +25,7 @@ DEFAULT_MODEL = "claude-opus-5-5"
 NO_KEY_ERROR = ("Automatic rule drafting is unavailable (no API key configured). "
                 "You can still change the values on the left.")
 INVALID_PREFIX = "Couldn't turn that into a valid rule:"
+log = logging.getLogger(__name__)
 
 
 class DraftCondition(BaseModel):
@@ -190,7 +192,8 @@ def draft_rule(text: str, live: RuleSet, client=None, saved_dir: str | Path = Pa
             output_config={"effort": "medium"},
         )
     except Exception as e:
-        return Draft(text, None, [], f"Automatic rule drafting failed ({type(e).__name__}). "
+        log.exception("rule drafting failed for %r", text)  # full traceback for diagnosis
+        return Draft(text, None, [], f"Automatic rule drafting failed ({type(e).__name__}: {str(e)[:200]}). "
                                      "You can still change the values on the left.", "live")
     out = resp.parsed_output
     if resp.stop_reason == "refusal" or out is None:
