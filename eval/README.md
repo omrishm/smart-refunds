@@ -23,8 +23,8 @@ Run (costs money, prints an estimate first):
     python -m smartrefunds eval
 
 Results go to `results/<date>-<prompt>-<model>.json`. `results/summary.md` is the latest run, and
-`summary-<prompt>.md` keeps each prompt version's run. `summary-notes-v2.md` is the Opus vs Haiku
-comparison behind the model choice.
+`summary-<prompt>.md` keeps each prompt version's run. `summary-notes-v4.md` is the three-model comparison
+(Haiku, Sonnet and Opus 5.5) behind the model choice; `summary-notes-v2.md` is the earlier Opus vs Haiku run.
 
 **Headline metrics:**
 - **Escalation recall:** share of true red flags the model caught.

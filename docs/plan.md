@@ -1,5 +1,9 @@
 # Smart Refunds Implementation Plan
 
+> **Superseded.** This is the plan the build started from, kept for the record; its checkboxes were not
+> ticked as work was done. What was built is described in [`design.md`](design.md) and the
+> [README](../README.md); changes along the way are in [`ai-usage-log.md`](ai-usage-log.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A runnable refund-triage system: a CLI that decides `pending.csv` (auto-approve vs route to a person), a Streamlit demo of the reviewer queue and of the manager's rule change with preview, an AI eval, and the submission docs. All of it lives in one public git repo.

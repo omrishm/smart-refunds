@@ -1,4 +1,6 @@
-# Eval labels: for review
+# Eval labels
+
+Reviewed and signed off by Omri on 2026-10-25 (see [`README.md`](README.md)).
 
 Each case: the notes as written, the facts a correct note reader should report (everything not listed
 should be `not_mentioned`), and where the v1 rules then send it. Edit `eval/cases.jsonl` to change a label.

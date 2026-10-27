@@ -1,6 +1,6 @@
 # Smart Refunds: Design
 
-Status: draft for approval · 2026-10-25 · author: Omri (decisions), drafted with Claude Code
+Status: approved and built · 2026-10-25 · author: Omri (decisions), drafted with Claude Code
 
 Companion document: [`findings.md`](findings.md) (data analysis, traps, per-row notes on pending).
 Everything marked **(builder's call)** was decided during drafting and can be changed without asking.
@@ -266,7 +266,8 @@ the slide evidence is regenerated from it.
 - **Delivery disputes:** RF-2181 (R2, draft rejection), RF-1073 (S3, with warning), and RF-1067, RF-1068
   and the Northfield never-arrived cases (R3).
 - **Policy rejections:** RF-1074 (R5, draft rejection).
-- **Other:** RF-1072 (R7, draft rejection) and RF-2183 ×2 (S2).
+- **Other:** RF-1072 (R6: the note reader also reports that "matches order line" contradicts the claim, so
+  R6 decides before R7's draft rejection) and RF-2183 ×2 (S2).
 - **Damage & evidence:** RF-1075 (R6) and RF-1076 (R8).
 
 **CLI output (builder's call):** `out/decisions_<input>.csv` has the input columns plus `outcome`
@@ -386,7 +387,7 @@ active (live / saved / off) and states that payment is mocked.
 
 These must be testable, explainable and safe when the model is down.
 
-**Eval set** (`eval/cases.jsonl`, committed): about 30–40 labelled notes, covering:
+**Eval set** (`eval/cases.jsonl`, committed): 43 labelled notes, covering:
 - all pending traps (RF-1073 injection, RF-1074 Spanish double refund, RF-1075 contradiction, RF-2182
   confirmed fraud with a blank flag, RF-2181 signature, RF-1072 order-line match, Northfield spellings
   incl. Spanish)
@@ -405,7 +406,8 @@ eval README records who signed off on the labels.
 - end-to-end routing agreement after rules
 - cost and latency per decision
 
-Run on Opus 5.5 and Haiku 5.5. Results go to `eval/results/` and onto the AI slide.
+Run on Haiku, Sonnet and Opus 5.5 ([`eval/results/summary-notes-v4.md`](../eval/results/summary-notes-v4.md)).
+The results are on the AI slide.
 
 **Cost estimate:** about 2,000 tokens in and 400 out per decision. Roughly 1–1.6¢ on Opus 5.5 and
 0.04¢ on Haiku 5.5. At about 300 requests a week, $3–5 a week on Opus. The eval measures the actual
@@ -495,7 +497,7 @@ changed or thrown away. It feeds the README line. Candidates from today:
 - reviewer screen (lanes, incidents, case view, actions, audit, role switch)
 - manager screen (rules list, inline edits, plain English → draft with clarifying question, preview,
   publish, rollback)
-- eval on Opus 5.5 and Haiku 5.5
+- eval on Haiku, Sonnet and Opus 5.5
 - README, slides, recording
 
 **Mocked (and labelled in the UI and README):**
